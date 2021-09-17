@@ -1,5 +1,11 @@
 package chain.main;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
@@ -13,6 +19,8 @@ import java.util.TimerTask;
 
 import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
+
+import org.json.JSONObject;
 
 import chain.component.Transaction;
 
@@ -28,6 +36,8 @@ import chain.component.Transaction;
  * 			2) Guaranteer / user  connection
  * 			3) Smart contract
  * 			4) Data reading and execution of smart contract ( API for smartContract )
+ * 			5) Control Node status from command line
+ * 			6) Controller for waiting transaction. Can delete old transaction.
  * 
  */
 public class Node {
@@ -38,21 +48,32 @@ public class Node {
 	 * 	
 	 * 
 	 * 	Global variable list:
-	 * 		1) Chain;
+	 * 		1) MileStone. It is a light method for accessing to chain
+	 * 		1) Head. It's a link to first Node of chain;
 	 * 	 	2) Pool;
+	 * 		2) "ResponseThreadList" contain all the "ResponseThread";
+	 * 		3) "currentTransactionNumeber" contain the number position of transaction in the block. Essential for get a certain transaction.
+	 * 		3) Get info about the last Node insert by this node;
 	 * 		3) Private and public key of block;
 	 * 		4) Socket HostName port of current Node;
 	 * 		5) Socket HostName port of guaranteer;
-	 * 
+	 * 		6) Variable that describe if listener is stopped. It's permit to stop listener thread: "getDataThread". 
+	 *  
 	 */
 	// lists
-	
-	Block Head;
-	Block Tail;
 	private HashMap<String, Block> MileStone;
+
+	private Block Head;
 	
-		
 	private List<Transaction> pool;
+	
+	private List<ResponseThread> ResponseThreadList;
+	
+	private int currentTransactionNumeber = 0;
+	
+	// lastInsertBlock
+	private Block lastInsertBlock;
+	
 
 	// Keys
 	private PrivateKey privateKey = null;
@@ -64,6 +85,11 @@ public class Node {
 
 	private String guarantorHostname;
 	private int guarantorPort;
+	
+	
+	// boolean variables
+	// TODO: To add to the parameter for stop node
+	private boolean listenerIsActive = true;
 
 
 
@@ -158,13 +184,12 @@ public class Node {
 		
 		
 		
-		// Chain inizialization
+		// Chain initialization
 		if ( listIsEmpty() ) {
 			// If list is clear create a block zero
 			Block blockZero = new Block();
 			
-			this.Head = blockZero;
-			this.Tail = blockZero;
+			Head = blockZero;
 			
 			this.MileStone.put("Head", blockZero);
 			this.MileStone.put("Tail", blockZero);
@@ -173,13 +198,11 @@ public class Node {
 			addBlock(blockZero);
 			
 		} else {
-			// TODO: Call for all chain block
+			// If chain is up to load
 			loadChain();
 			
 		}
 		
-
-
 	}
 
 	public Node( String localHostName, int localPort, String gH, int gP ) 
@@ -188,11 +211,9 @@ public class Node {
 		// call to standard constructor
 		this(localHostName, localPort);
 
-
 		// Socket hostName and port
 		this.socketHostname = localHostName;
 		this.socketPort = localPort;
-
 
 	}
 
@@ -213,6 +234,8 @@ public class Node {
 	 * 	  
 	 * 	
 	 * 	Thread " getDataThread " is used for listening action from: Guaranteer, User or Other node
+	 * 	Thread " ResponseThread " is used for maintain and execute action and wait for the end of action. At the end Node send response to client
+	 * 
 	 */
 	// Connection to guaranteer. 
 	// Send and Get Block 
@@ -223,25 +246,175 @@ public class Node {
 		return true;
 	}	
 	
+	// TODO: Send to guaranteer
 	private void addBlock(Block block) {
 		
 	}
 	
+	// TODO: call all chain from guaranteer
 	private void loadChain() {
 		
-	}
-	
-	
-	class getDataThread extends Thread {
 		
-		@Override
-		public void run() {
+		for (;;) {
+			
+			addBlock( new Block() );
 			
 		}
 		
 	}
 	
+	
+	class getDataThread extends Thread {
 
+		@Override
+		public void run() {
+
+			Object sincronizer = new Object();
+			
+			while ( listenerIsActive ) {
+				
+				try {
+					ServerSocket serverSocket = new ServerSocket( socketPort );
+
+					// Execute an controller for connection
+					new Node.ResponseThread(serverSocket.accept(), sincronizer, currentTransactionNumeber++).start();
+										
+				} catch (SocketException se) {
+					System.exit(0);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			}
+
+		}
+
+	}
+	
+	private class ResponseThread extends Thread {
+		
+		private Socket socket = null;
+		private Object sincronizer = null;
+		private int BlockNumberCounter = 0;
+				
+		public ResponseThread(Socket socket, Object sincronizer, int BlockNumberCounter) 
+		{
+			this.socket = socket;
+			this.sincronizer = sincronizer;
+			this.BlockNumberCounter = BlockNumberCounter;
+		}
+		
+		
+		@Override
+		public void run() {
+			
+			try {
+				
+				// Response string
+				String returnString = "";
+				
+				
+				// In out stream
+				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+				PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+			    
+				JSONObject jObj = (JSONObject) inStream.readObject();
+				
+				
+				
+				// TODO: Add other connection action
+				switch ( jObj.getString("ActionToPerform") ) {
+				
+				case "postTransactionInPool": {
+										
+					Transaction t = Transaction.ObjFromJSON( jObj.getJSONObject( "Transaction" ) );
+					addTTPool(t);
+					
+					// Add to list and wait for a block creation
+					ResponseThreadList.add(this);
+					this.wait();
+					
+					// Get response from variables
+					returnString = lastInsertBlock.getHash() + "-" + BlockNumberCounter;
+					
+					
+					break;
+				}
+				
+				case "readBlock":
+					
+					String blockHash = jObj.getString("BlockHash");
+
+					Block previus = null;
+					
+					
+					for ( Block b : MileStone.values() ) {
+						
+						if ( Block.HashIsBigger( b.getHash(), blockHash ) ) {
+							
+							Block currentBlock = previus;
+							
+							for ( ; Block.HashIsBigger(  b.getHash(), currentBlock.getHash() ) ; currentBlock = currentBlock.getNextBlock() ) {
+								
+								if ( currentBlock.getHash() == blockHash ) 
+								{
+									returnString = currentBlock.toString();
+									break;
+								}
+								
+							}
+							break;
+						}
+						previus = b;
+						
+					}
+					
+					
+
+					
+					break;
+				
+				case "": {
+					
+					synchronized (sincronizer) {
+						
+						
+						
+						returnString = "";
+					}
+					
+					break;
+				}
+				
+				default:
+					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
+				}
+				
+				
+				
+
+				
+				// return response 
+				out.write(returnString);
+
+				// close socket and stream
+				socket.close();
+				inStream.close();
+				out.close();
+			
+			
+			} catch (Exception e) {
+				System.err.println("Error in 'ResponseThread': " + e.getMessage() );
+				
+			}
+		}
+		
+	}
+	
+	
+
+	
+	
 	
 
 
@@ -285,7 +458,7 @@ public class Node {
 	 * 		For not send an empty block there is a control for check if pool is not empty. 
 	 * 
 	 */
-	public void addTTPool(Transaction t) 
+	public String addTTPool(Transaction t) 
 	{
 
 		if ( t.getLenght() + pool.size() > blockMaxSize ) 
@@ -294,21 +467,44 @@ public class Node {
 		}
 
 		pool.add( t );
+		
+		
+		
+		// TODO: Return 
+		return "";
 	}
 
-	// Controller for sending procedure of new block
+
+
+	// Controller for "sending procedure" of new block
 	private void sendToGuarantor() 
 	{
 
 		if ( pool.size() > 0 ) {
 			// TODO: generate node
+			Block n = new Block();
 			
 			// TODO: Encryption of new node 
 			
 			// TODO: send node to guaranteer
 
-
+			// TODO: receive definitive block
+			
+			// TODO: set variable about block info 
+			lastInsertBlock = n;
+			
+			// Notify all client to execute response
+			for( ResponseThread rt : ResponseThreadList ) 
+			{
+				rt.notify();	
+			}
+			
+			currentTransactionNumeber = 0;
 			pool.clear();
+			
+			
+			// TODO: set MileStone
+			
 		}
 
 	}
@@ -333,6 +529,8 @@ public class Node {
 
 	
 
+	
+	
 
 
 	/*
@@ -344,6 +542,12 @@ public class Node {
 
 	// TODO: Creazione di un blocco e validazione
 
+	// TODO: ReadChain
+	
+	
+	
+	
+	
 	
 	
 	
@@ -365,6 +569,9 @@ public class Node {
 
 
 
+	
+	
+	
 	
 	/*
 	 * 

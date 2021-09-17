@@ -8,6 +8,10 @@ import java.util.TimerTask;
 
 import javax.xml.bind.DatatypeConverter;
 
+import org.json.JSONObject;
+
+import com.google.gson.JsonParser;
+
 
 
 public class GenericTest {
@@ -32,6 +36,27 @@ public class GenericTest {
 
 		// Timer action
 		GenericTest gt = new GenericTest();
+		
+		
+		// JsonObject 
+		jsonObjTest();
+	}
+
+
+
+	private static void jsonObjTest() {
+
+		String js = " {	\"name\" : \"Ronaldo\",	\"nickname\" : \"Sam\", \"id\" : 312, \"age\" : 21, \"height\" : 163, \"lastOverScore\" : [4, 1, 6, 6, 2, 1] } ";
+
+		
+		JSONObject jobj = (JSONObject) JSONObject.stringToValue(js);
+
+		
+		
+		
+		System.out.println("name" + jobj.getString("name") );
+		
+				
 	}
 
 
@@ -45,7 +70,6 @@ public class GenericTest {
         
         timer.schedule(task, 0, 1000);
 		*/
-		
 		
 		
 	}	

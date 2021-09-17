@@ -1,8 +1,5 @@
 package chain.component;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
 import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
@@ -65,6 +62,16 @@ public class Transaction {
 	
 	public int getBLenght() {
 		return getByte().length;
+	}
+
+
+
+
+
+
+	// get transaction object and create Transaction
+	public static Transaction ObjFromJSON(JSONObject jsonObject) {
+		return null;
 	}
 	
 }
