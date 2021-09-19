@@ -2,6 +2,8 @@ package chain.main;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,6 +16,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -32,12 +35,27 @@ import chain.component.Transaction;
  * 	Node of network
  * 
  * 		TOTO:
- * 			1) Connesione con gli altri nodi e la loro gestione ( private key, hostName and Port )
+ * 			1) Connection to other Node ( private key, hostName and Port )
  * 			2) Guaranteer / user  connection
  * 			3) Smart contract
  * 			4) Data reading and execution of smart contract ( API for smartContract )
  * 			5) Control Node status from command line
- * 			6) Controller for waiting transaction. Can delete old transaction.
+ * 			6) Controller for waiting transaction. Can delete old transaction;
+ * 			7) String stamp of Node action. Runtime.
+ * 
+ * 
+ * 		MODULE LIST: 
+ * 			1) 	GLOBAL VARIABLES OF NODE;
+ * 			2) 	GENERAL SETTING OF NODE
+ * 			3) 	CONSTRUCTOR
+ * 			4) 	GUARANTEER
+ * 			5) 	SMART CONTRACT
+ * 			6) 	POOL
+ * 			7) 	DATA MANIPOLATION
+ * 			8) 	USER / APPLICATION CONNECTION
+ * 			9) 	ENCRIPTION
+ * 			10) MAIN
+ * 
  * 
  */
 public class Node {
@@ -61,6 +79,7 @@ public class Node {
 	 *  
 	 */
 	// lists
+	// TODO: controllare che vada bene ... 
 	private HashMap<String, Block> MileStone;
 
 	private Block Head;
@@ -70,6 +89,7 @@ public class Node {
 	private List<ResponseThread> ResponseThreadList;
 	
 	private int currentTransactionNumeber = 0;
+	
 	
 	// lastInsertBlock
 	private Block lastInsertBlock;
@@ -88,7 +108,6 @@ public class Node {
 	
 	
 	// boolean variables
-	// TODO: To add to the parameter for stop node
 	private boolean listenerIsActive = true;
 
 
@@ -132,6 +151,7 @@ public class Node {
 	 *  	3) Private and Public key;
 	 *  	4) Set guaranteer hostName and Port;
 	 *  	5) Set default hostName and Port for current Node. In the second constructor it is set to a arbitrary value;
+	 *  	6) Start "getDataThread" thread. This module listen action from users or guaranteer.
 	 *  
 	 *  
 	 *  CHAIN INIZIALIZATION:
@@ -182,18 +202,19 @@ public class Node {
 		this.socketPort = 8080;
 		
 		
+		// Start listener module
+		new getDataThread().start();
+		
 		
 		
 		// Chain initialization
 		if ( listIsEmpty() ) {
 			// If list is clear create a block zero
-			Block blockZero = new Block();
+			Block blockZero = genereteNewBlock();
 			
 			Head = blockZero;
 			
-			this.MileStone.put("Head", blockZero);
-			this.MileStone.put("Tail", blockZero);
-			this.MileStone.put("Mid", blockZero);
+			this.MileStone.put(blockZero.getHash(), blockZero);
 			
 			addBlock(blockZero);
 			
@@ -233,8 +254,16 @@ public class Node {
 	 * 		"loadChain"		For load all block from guaranteer to local chain.
 	 * 	  
 	 * 	
-	 * 	Thread " getDataThread " is used for listening action from: Guaranteer, User or Other node
-	 * 	Thread " ResponseThread " is used for maintain and execute action and wait for the end of action. At the end Node send response to client
+	 * 	THREAD LIST:
+	 * 		1) Thread " getDataThread " is used for listening action from: Guaranteer, User or Other node
+	 * 		2) Thread " ResponseThread " is used for maintain and execute action and wait for the end of action. At the end Node send response to client
+	 * 
+	 * 
+	 * 	RETURN STRING TO USER WHEN IS SEND A TRANSACTION:
+	 * 		When user send a transaction is return a string thath contain a link to thath transaction in the block.
+	 * 		This is an example: 	0x31b98d14007bdee637298086988a0bbd31184523
+	 * 		In the string the number before letter "x" is the number of transaction in the block. 
+	 * 		The part of string before letter "x" is the block hash.
 	 * 
 	 */
 	// Connection to guaranteer. 
@@ -243,16 +272,93 @@ public class Node {
 	// Get transaction
 	
 	private boolean listIsEmpty() {
-		return true;
+		
+		boolean isEmpty = false;
+		
+		JSONObject JObj = new JSONObject();
+		JObj.put("ActionToPerform", "ChainIsEmpty");
+		
+		try {
+			
+			Socket s = new Socket(guarantorHostname, guarantorPort);
+			
+			OutputStream outputStream = s.getOutputStream();
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+			
+			ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
+
+			
+			objectOutputStream.writeObject(JObj);
+			isEmpty = inStream.readBoolean();
+			
+			
+			s.close();
+			objectOutputStream.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
+		return isEmpty;
 	}	
 	
-	// TODO: Send to guaranteer
+	// Send to guaranteer
 	private void addBlock(Block block) {
+		
+		try {
+			Socket s = new Socket(guarantorHostname, guarantorPort);
+			
+			OutputStream outputStream = s.getOutputStream();
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+			
+			objectOutputStream.writeObject(block);
+			
+			
+			s.close();
+			objectOutputStream.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		
 		
 	}
 	
-	// TODO: call all chain from guaranteer
+	// TODO: call all block of chain from guaranteer
 	private void loadChain() {
+		
+		/*
+		 * 
+		boolean isEmpty = false;
+		
+		JSONObject JObj = new JSONObject();
+		JObj.put("ActionToPerform", "ChainIsEmpty");
+		
+		try {
+			
+			Socket s = new Socket(guarantorHostname, guarantorPort);
+			
+			OutputStream outputStream = s.getOutputStream();
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+			
+			ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
+
+			
+			objectOutputStream.writeObject(JObj);
+			isEmpty = inStream.readBoolean();
+			
+			
+			s.close();
+			objectOutputStream.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		 * 
+		 */
 		
 		
 		for (;;) {
@@ -263,9 +369,10 @@ public class Node {
 		
 	}
 	
-	
+	// Listen connection to node and start "ResponseThread" thread for serve actions
 	class getDataThread extends Thread {
 
+		@SuppressWarnings("resource")
 		@Override
 		public void run() {
 
@@ -322,64 +429,31 @@ public class Node {
 				
 				
 				
-				// TODO: Add other connection action
+				// TODO: Add other action
 				switch ( jObj.getString("ActionToPerform") ) {
 				
 				case "postTransactionInPool": {
 										
-					Transaction t = Transaction.ObjFromJSON( jObj.getJSONObject( "Transaction" ) );
-					addTTPool(t);
-					
-					// Add to list and wait for a block creation
-					ResponseThreadList.add(this);
-					this.wait();
-					
-					// Get response from variables
-					returnString = lastInsertBlock.getHash() + "-" + BlockNumberCounter;
-					
-					
+					postTransaction( jObj, this, BlockNumberCounter );
 					break;
 				}
 				
+				case "readTransaction":
+					
+					String transactionNumber = jObj.getString("BlockHash").split("x")[0];
+					returnString = readBlock( jObj );
+					getTransactionFromObject( returnString, transactionNumber );
+					break;
+					
+					
 				case "readBlock":
 					
-					String blockHash = jObj.getString("BlockHash");
-
-					Block previus = null;
-					
-					
-					for ( Block b : MileStone.values() ) {
-						
-						if ( Block.HashIsBigger( b.getHash(), blockHash ) ) {
-							
-							Block currentBlock = previus;
-							
-							for ( ; Block.HashIsBigger(  b.getHash(), currentBlock.getHash() ) ; currentBlock = currentBlock.getNextBlock() ) {
-								
-								if ( currentBlock.getHash() == blockHash ) 
-								{
-									returnString = currentBlock.toString();
-									break;
-								}
-								
-							}
-							break;
-						}
-						previus = b;
-						
-					}
-					
-					
-
-					
+					returnString = readBlock( jObj );
 					break;
 				
 				case "": {
 					
 					synchronized (sincronizer) {
-						
-						
-						
 						returnString = "";
 					}
 					
@@ -391,9 +465,7 @@ public class Node {
 				}
 				
 				
-				
-
-				
+								
 				// return response 
 				out.write(returnString);
 
@@ -404,12 +476,81 @@ public class Node {
 			
 			
 			} catch (Exception e) {
-				System.err.println("Error in 'ResponseThread': " + e.getMessage() );
-				
+				System.err.println("Error in 'ResponseThread': " + e.getMessage() );		
 			}
 		}
 		
 	}
+	
+	
+	
+	
+	
+	
+	/**
+	 **
+	 ** 	START CHAIN ACTIONS
+	 ** 
+	 ** 
+	 */
+	
+	private String postTransaction( JSONObject jObj, ResponseThread thisOBJ, int BlockNumberCounter ) {
+		
+		String returnString = "";
+		
+		Transaction t = Transaction.ObjFromJSON( jObj.getJSONObject( "Transaction" ) );
+		addTTPool(t);
+		
+		// Add to list and wait for a block creation
+		ResponseThreadList.add( thisOBJ );
+		try { 
+			thisOBJ.wait(); 
+		} catch (InterruptedException e) { e.printStackTrace(); }
+		
+		// Get response from variables
+		returnString = BlockNumberCounter + "x" + lastInsertBlock.getHash();
+		
+		return returnString;
+	}
+	
+	private String readBlock( JSONObject jObj ) {
+		
+		String returnString = "";
+		String blockName = jObj.getString("BlockHash").split("x")[1];
+				
+		MileStone.get(blockName);
+		
+		return returnString;
+	}
+	
+	
+	
+	private String getTransactionFromObject( String returnString, String transactionNumber ) {
+		
+		if ( !returnString.equals("") ) {
+			
+			JSONObject rObj = new JSONObject(returnString); 
+			JSONObject tr = (JSONObject) rObj.get("Transactions");
+			
+			returnString =  tr.get( transactionNumber ).toString();
+			
+		}
+		
+		return returnString;
+	}
+	
+	
+	/**
+	 **
+	 ** 	START CHAIN ACTIONS
+	 ** 
+	 ** 
+	 */
+	
+	
+	
+	
+	
 	
 	
 
@@ -423,9 +564,9 @@ public class Node {
 	 * 		SMART CONTRACT
 	 * 
 	 */
-	// Smart contract Execution
+	// TODO: Smart contract Execution
 
-	// Smart contract control
+	// TODO: Smart contract control
 	
 	
 
@@ -458,7 +599,7 @@ public class Node {
 	 * 		For not send an empty block there is a control for check if pool is not empty. 
 	 * 
 	 */
-	public String addTTPool(Transaction t) 
+	private void addTTPool(Transaction t) 
 	{
 
 		if ( t.getLenght() + pool.size() > blockMaxSize ) 
@@ -468,42 +609,68 @@ public class Node {
 
 		pool.add( t );
 		
-		
-		
-		// TODO: Return 
-		return "";
 	}
-
-
-
-	// Controller for "sending procedure" of new block
+	
+	// sending procedure for send new block to guaranteer to be checked
 	private void sendToGuarantor() 
 	{
 
 		if ( pool.size() > 0 ) {
-			// TODO: generate node
-			Block n = new Block();
+			// Generate node
+			Block n = genereteNewBlock();
 			
-			// TODO: Encryption of new node 
+			// Encryption of new node 
+			n.encriptNode();
 			
-			// TODO: send node to guaranteer
+			
+			// Send node to guaranteer and receive definitive block
+			
+			Block fixedBlock = null;
+			
+			JSONObject JObj = new JSONObject();
+			JObj.put("ActionToPerform", "AddBlockToChain");
+			JObj.put("Block", n);
+			
+			try {
+				
+				Socket s = new Socket(guarantorHostname, guarantorPort);
+				
+				OutputStream outputStream = s.getOutputStream();
+				ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+				
+				ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
 
-			// TODO: receive definitive block
+				
+				objectOutputStream.writeObject(JObj);
+				fixedBlock = (Block) inStream.readObject();
+				
+				
+				s.close();
+				objectOutputStream.close();
+				
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
 			
-			// TODO: set variable about block info 
-			lastInsertBlock = n;
+
 			
-			// Notify all client to execute response
+			// Set variable about block info 
+			if ( fixedBlock != null ) lastInsertBlock = n;
+			
+			// Notify all waiting client to execute response
 			for( ResponseThread rt : ResponseThreadList ) 
-			{
+			{ 
 				rt.notify();	
 			}
 			
 			currentTransactionNumeber = 0;
 			pool.clear();
 			
-			
-			// TODO: set MileStone
+			// Set MileStones
+			MileStone.put(fixedBlock.getHash(), fixedBlock);
 			
 		}
 
@@ -544,6 +711,29 @@ public class Node {
 
 	// TODO: ReadChain
 	
+	// creation of a block
+	private Block genereteNewBlock() {
+		
+		Block block = new Block();
+		
+		
+		if (Head == null ) {
+			// TODO block zero 
+			
+			
+		} else {
+			// TODO: Block from pool
+			
+		}
+		
+		
+		return block;
+		
+	}
+	
+	public void setListenerIsActive( boolean active ) {
+		this.listenerIsActive = active;
+	}
 	
 	
 	
@@ -615,6 +805,78 @@ public class Node {
 		byte[] result = cipher.doFinal(cipherText);
 
 		return new String(result);
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	/*
+	 * 
+	 * 		MAIN
+	 * 
+	 * 	
+	 * 	Comands: 
+	 * 		1) STOP:	Ferma l'esecuzione del nodo;
+	 * 		2) 	
+	 * 
+	 */
+	public static void main(String[] args) {
+		
+		boolean isRunning = true;
+		
+		
+		String hostLocal = "";
+		int portLocal = 1;
+		
+		String hostGuaranteer = "";
+		int portGuaranteer = 1;
+		
+		
+		Node node = null;
+		try {
+			node = new Node( hostLocal, portLocal,
+						hostGuaranteer, portGuaranteer );
+			
+			Scanner s = new Scanner(System.in);
+			
+			
+			while ( isRunning ) {
+				
+			    String userInput = s.next();
+			    
+			    
+			    // TODO: Add new actions
+			    switch (userInput) {
+				case "stop": {
+					
+					isRunning = false;
+					node.setListenerIsActive( false );
+					break;
+				}
+				case "tctg": {
+					
+					// Test connection to guaranteer
+					break;
+				}
+				
+				
+				default:
+					throw new IllegalArgumentException("Unexpected value: " + userInput);
+				}		
+				
+			    
+			}
+			
+			
+		    s.close();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}	
 	}
 
 }

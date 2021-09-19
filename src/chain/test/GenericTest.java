@@ -8,9 +8,9 @@ import java.util.TimerTask;
 
 import javax.xml.bind.DatatypeConverter;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
-import com.google.gson.JsonParser;
 
 
 
@@ -49,14 +49,28 @@ public class GenericTest {
 		String js = " {	\"name\" : \"Ronaldo\",	\"nickname\" : \"Sam\", \"id\" : 312, \"age\" : 21, \"height\" : 163, \"lastOverScore\" : [4, 1, 6, 6, 2, 1] } ";
 
 		
-		JSONObject jobj = (JSONObject) JSONObject.stringToValue(js);
-
+		String str = "[{\"No\":\"17\",\"Name\":\"Andrew\"},{\"No\":\"18\",\"Name\":\"Peter\"}, {\"No\":\"19\",\"Name\":\"Tom\"}]";  
 		
 		
+		System.err.println("arr");
+		JSONArray array = new JSONArray(str);  
 		
-		System.out.println("name" + jobj.getString("name") );
+		for(int i=0; i < array.length(); i++)   
+		{  
+			JSONObject object = array.getJSONObject(i);  
+			System.out.println(object.getString("No"));  
+			System.out.println(object.getString("Name"));  
+		}    
 		
-				
+		System.err.println("obj:");
+		
+		JSONObject obj = new JSONObject(js);  
+		
+		System.out.println(obj.get("name"));
+		System.out.println(obj.get("id"));
+		System.out.println(obj.get("lastOverScore"));
+		
+		
 	}
 
 
@@ -95,12 +109,12 @@ public class GenericTest {
 	
 	
 	public static void testString() {
+		Transaction tc = new Transaction(null, null);
 
-		Transaction tc = new Transaction();
-
-		tc.add("test", "test");
-		tc.add("test", "z");
-
+		
+		tc.setData("TestString");
+		
+		
 		System.out.println("tc: " + tc.getSByte() + " - " + tc.getTransaction() + " - - -  " + tc.getByte());
 
 
@@ -108,6 +122,7 @@ public class GenericTest {
 			System.out.print( b + " " );
 		}
 
+		
 		System.out.println( "\nl1: " + tc.getLenght() );
 
 	}

@@ -1,20 +1,29 @@
 package chain.component;
 
+import java.io.File;
+
 import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
 
 public class Transaction {
 	
-	private JSONObject transaction;
 	
-	
-	
-	public Transaction() {
-		transaction = new JSONObject();
 		
-		// inserisco i dati standard di una transazione
+	private JSONObject data;
+	
+	private Users user;
+
+	
+	
+	
+	public Transaction(Users user, JSONObject data) {
+
+		this.user = user;
+		this.data = data;
+
 		
+				
 	}
 	
 	
@@ -28,15 +37,60 @@ public class Transaction {
 	 * 	OPERATION ON TRANSACTION 
 	 * 
 	 */
-	public void add(String key, Object obj ) 
+	public void setData (String str) 
 	{
-		transaction.append(key, obj);
+		
+		JSONObject jArr = new JSONObject();
+		
+		jArr.append("Type", "String" );
+		jArr.append("Lenght", str.length() );
+		jArr.append("Owner", user.getBaseData() );
+
+		
+		
+		data.append("info", "String");
+		data.append("tipo", "String");
+		data.append("file", str);
+		
+	}
+	
+	public void setObject(File file) 
+	{
+		
+		JSONObject jArr = new JSONObject();
+		
+		jArr.append("Type", file.getName().substring( file.getName().lastIndexOf(".") ) );
+		jArr.append("Name", file.getName() );
+		jArr.append("Lenght", file.length() );
+		jArr.append("Owner", user.getBaseData() );
+		
+		
+		
+		data.append("info", jArr);
+		data.append("tipo", "file");
+		data.append("file", file);
+		
+	}
+	
+	
+	
+	public Users getUser() 
+	{
+		return user;
 	}
 	
 	public JSONObject getTransaction() 
 	{
-		return transaction;
+		return data;
 	}
+	
+	public void serUser(Users user)
+	{
+		this.user = user;
+	}
+	
+	
+	
 	
 	
 	
@@ -47,12 +101,12 @@ public class Transaction {
 	 */
 	public int getLenght() 
 	{
-		return transaction.toString().length();
+		return data.toString().length();
 	}
 	
 	public byte[] getByte() 
 	{
-		return transaction.toString().getBytes();
+		return data.toString().getBytes();
 	}
 
 	public String getSByte() 

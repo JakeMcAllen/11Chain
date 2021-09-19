@@ -4,13 +4,13 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
 
-public class SmartContractController {
+public class SmartContract {
 	
 	private JSONObject transaction;
 	
 	
 	
-	public SmartContractController() {
+	public SmartContract() {
 		transaction = new JSONObject();
 		
 	}
