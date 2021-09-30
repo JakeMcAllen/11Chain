@@ -6,28 +6,37 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
 
+import chain.main.Users;
+
 public class Transaction {
 	
 	
 		
 	private JSONObject data;
-	
-	private Users user;
-
-	
-	
-	
-	public Transaction(Users user, JSONObject data) {
-
-		this.user = user;
-		this.data = data;
-
 		
-				
+	private Users user;
+	private String userID;
+	
+	
+
+	
+	public Transaction(String user, JSONObject data) {
+
+		this.data = data;
+		this.userID = user;
 	}
 	
+	public Transaction(Users user, JSONObject data) {
+		this(user.getIndex(), data);
+		
+		this.user = user;
+	}
 	
+	public Transaction(Users user, String str) {
+		this(str, new JSONObject( str ) );
+	}
 	
+
 
 	  
 	
@@ -43,16 +52,19 @@ public class Transaction {
 		JSONObject jArr = new JSONObject();
 		
 		jArr.append("Type", "String" );
+		jArr.append("Name", "String" );
 		jArr.append("Lenght", str.length() );
-		jArr.append("Owner", user.getBaseData() );
+		jArr.append("Owner", user.getData() );
 
 		
 		
-		data.append("info", "String");
+		data.append("info", jArr);
 		data.append("tipo", "String");
-		data.append("file", str);
+		data.append("data", str);
 		
 	}
+	
+	
 	
 	public void setObject(File file) 
 	{
@@ -62,26 +74,25 @@ public class Transaction {
 		jArr.append("Type", file.getName().substring( file.getName().lastIndexOf(".") ) );
 		jArr.append("Name", file.getName() );
 		jArr.append("Lenght", file.length() );
-		jArr.append("Owner", user.getBaseData() );
+		jArr.append("Owner", user.getData() );
 		
 		
 		
 		data.append("info", jArr);
 		data.append("tipo", "file");
-		data.append("file", file);
+		data.append("data", file);
 		
 	}
 	
 	
-	
+	/*
+	 * 
+	 * GET
+	 * 
+	 */
 	public Users getUser() 
 	{
 		return user;
-	}
-	
-	public JSONObject getTransaction() 
-	{
-		return data;
 	}
 	
 	public void serUser(Users user)
@@ -89,16 +100,15 @@ public class Transaction {
 		this.user = user;
 	}
 	
+	public String getUserID() { 
+		return this.userID;
+	}
 	
+	public JSONObject getTransaction() 
+	{
+		return data;
+	}
 	
-	
-	
-	
-	/*
-	 * 
-	 * 	GET DATA FROM TRANSACTION
-	 * 
-	 */
 	public int getLenght() 
 	{
 		return data.toString().length();
@@ -114,18 +124,41 @@ public class Transaction {
 		return DatatypeConverter.printHexBinary( getByte() );
 	}
 	
-	public int getBLenght() {
-		return getByte().length;
+	
+	
+	
+	
+	/*
+	 * 
+	 * TO and FROM JSONObject
+	 * 
+	 */
+	public JSONObject toJObj() {
+		JSONObject jObj = new JSONObject();
+		
+		jObj.append("data", this.data);
+		jObj.append("userId", user.getIndex());
+		
+		
+		return jObj;
+		
 	}
-
-
-
-
-
 
 	// get transaction object and create Transaction
-	public static Transaction ObjFromJSON(JSONObject jsonObject) {
-		return null;
+	public static Transaction ObjFromJSON(JSONObject jObj) {
+		
+		
+		JSONObject dataJ = (JSONObject) jObj.get("data");
+		String userId = (String) jObj.get("userId");
+		
+		
+		return new Transaction(userId, dataJ);
 	}
+
+	@Override
+	public String toString() {
+		return "Transaction [data=" + data + ", user=" + user + ", userID=" + userID + "]";
+	}
+	
 	
 }

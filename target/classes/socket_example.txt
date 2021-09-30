@@ -1,0 +1,25 @@
+/*
+ * 
+			// CLIENT SOCKET SEND
+			Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
+			
+			// SERVER SOCKET RECIVE
+		    ServerSocket s = new ServerSocket( this.socketPort )
+			
+			
+			// WRITE and READ String
+		    try (
+		            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+		    		BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
+		    ) {
+		    	
+	    	    System.out.println("echo: " + in.readLine());
+		    	out.println( "testInput" );
+		    }
+		    
+		    
+		    // CLOSE
+		    s.close();		 		    
+		    
+ * 
+ */

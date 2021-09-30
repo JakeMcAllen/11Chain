@@ -1,16 +1,17 @@
 package chain.test;
 
+import chain.component.Node;
 import chain.component.Transaction;
-import chain.main.Node;
 
+import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.xml.bind.DatatypeConverter;
 
 
 
@@ -26,7 +27,7 @@ public class GenericTest {
 	public static void main(String[] args) throws Exception {
 
 		// Initial node test
-		// testNodeStartUp();
+		testNodeStartUp();
 
 		// test oabout String and Byte
 		// testString();
@@ -35,11 +36,19 @@ public class GenericTest {
 		// transacrionTest();
 
 		// Timer action
-		GenericTest gt = new GenericTest();
+		// GenericTest gt = new GenericTest();
 		
 		
 		// JsonObject 
-		jsonObjTest();
+		// jsonObjTest();
+		
+		
+		
+		// Scanner in = new Scanner(System.in);
+
+		// System.out.println("in: " + in );
+		
+		
 	}
 
 
@@ -109,7 +118,7 @@ public class GenericTest {
 	
 	
 	public static void testString() {
-		Transaction tc = new Transaction(null, null);
+		Transaction tc = new Transaction("", null);
 
 		
 		tc.setData("TestString");
@@ -132,7 +141,7 @@ public class GenericTest {
 	public static void testNodeStartUp () throws Exception {
 
 
-		Node n = new Node("localhost", 8081, "localhost", 8080);
+		Node n = new Node(8081, "localhost", 8080);
 		String plainText = "test";
 
 

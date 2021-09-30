@@ -1,31 +1,30 @@
-package chain.main;
+package chain.component;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
-import chain.component.Transaction;
+import chain.main.Block;
+
 
 
 
@@ -34,7 +33,7 @@ import chain.component.Transaction;
  * 
  * 	Node of network
  * 
- * 		TOTO:
+ * 		TODO:
  * 			1) Connection to other Node ( private key, hostName and Port )
  * 			2) Guaranteer / user  connection
  * 			3) Smart contract
@@ -42,6 +41,7 @@ import chain.component.Transaction;
  * 			5) Control Node status from command line
  * 			6) Controller for waiting transaction. Can delete old transaction;
  * 			7) String stamp of Node action. Runtime.
+ * 			8) Control of errors. Like when guaranteer is close.
  * 
  * 
  * 		MODULE LIST: 
@@ -79,58 +79,34 @@ public class Node {
 	 *  
 	 */
 	// lists
-	// TODO: controllare che vada bene ... 
 	private HashMap<String, Block> MileStone;
 
+	// first and last block of chain
 	private Block Head;
-	
-	private List<Transaction> pool;
-	
-	private List<ResponseThread> ResponseThreadList;
-	
-	private int currentTransactionNumeber = 0;
-	
-	
-	// lastInsertBlock
-	private Block lastInsertBlock;
+	private Block Tail;
 	
 
 	// Keys
 	private PrivateKey privateKey = null;
 	private PublicKey publicKey = null;
+	
 
-	// socket
-	private String socketHostname;
+	// socket port of node and hostName and Port of Guaranteer
 	private int socketPort;
 
-	private String guarantorHostname;
+	private String guarantorHostName;
 	private int guarantorPort;
+	
 	
 	
 	// boolean variables
 	private boolean listenerIsActive = true;
 
+	// index of node
+	private String index;
+	
 
 
-
-
-	/*
-	 * 
-	 * 	 	GENERAL SETTING OF NODE
-	 * 
-	 * 
-	 * 	This setting are constant used in all the node.
-	 * 
-	 * 	Constant list:
-	 * 		1) Max bytes for a block;
-	 * 		2) Time that local thread " TimerHelper " wait to try to send a Block to guaranteer;
-	 * 
-	 * 
-	 * 	Time for send a new block to guaranteer is set in second, but in the thread " TimerHelper " is used in milliseconds
-	 *  
-	 */
-	private final int blockMaxSize = 500;
-	private final int timeToSendBlock = 5;
 
 
 
@@ -170,72 +146,35 @@ public class Node {
 	 *   
 	 *  
 	 */
-	public Node(String gH, int gP) throws Exception 
+	public Node( int localPort, String guarenteerHostName, int guaranteerPort )  
 	{
-
-		// inizialization of lists
-		this.pool = new ArrayList<Transaction> ();
-
-		
-
-		// Create thread timer
-		Timer timer = new Timer();
-		TimerTask task = new Node.TimerHelper(this);
-
-		timer.schedule(task, 0, timeToSendBlock * 100);
-
-
-
+		// call to standard constructor
 		// Set Keys
-		KeyPair keypair = generateRSAKkeyPair();
+		KeyPair keypair = null;
+		try {
+			keypair = generateRSAKkeyPair();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 		this.privateKey = keypair.getPrivate();
 		this.publicKey = keypair.getPublic();
 
 
 
-		// Set ports
-		this.guarantorHostname = gH;
-		this.guarantorPort = gP;
-
-		this.socketHostname = "localhost";
-		this.socketPort = 8080;
+		// Set guaranteer host and ports and socket hostName and port
+		this.guarantorHostName = guarenteerHostName;
+		this.guarantorPort = guaranteerPort;
+		
+		this.socketPort = localPort;
 		
 		
 		// Start listener module
-		new getDataThread().start();
+		(new Node.getDataThread( this.socketPort )).start();
 		
-		
-		
-		// Chain initialization
-		if ( listIsEmpty() ) {
-			// If list is clear create a block zero
-			Block blockZero = genereteNewBlock();
+		// Load chain from guaranteer
+		loadChain();
 			
-			Head = blockZero;
-			
-			this.MileStone.put(blockZero.getHash(), blockZero);
-			
-			addBlock(blockZero);
-			
-		} else {
-			// If chain is up to load
-			loadChain();
-			
-		}
-		
-	}
-
-	public Node( String localHostName, int localPort, String gH, int gP ) 
-			throws Exception 
-	{
-		// call to standard constructor
-		this(localHostName, localPort);
-
-		// Socket hostName and port
-		this.socketHostname = localHostName;
-		this.socketPort = localPort;
-
 	}
 
 
@@ -260,117 +199,92 @@ public class Node {
 	 * 
 	 * 
 	 * 	RETURN STRING TO USER WHEN IS SEND A TRANSACTION:
-	 * 		When user send a transaction is return a string thath contain a link to thath transaction in the block.
+	 * 		When user send a transaction is return a string that contain a link to that transaction in the block.
 	 * 		This is an example: 	0x31b98d14007bdee637298086988a0bbd31184523
 	 * 		In the string the number before letter "x" is the number of transaction in the block. 
 	 * 		The part of string before letter "x" is the block hash.
 	 * 
 	 */
-	// Connection to guaranteer. 
-	// Send and Get Block 
-	// Get execution of Smart contract 
-	// Get transaction
 	
-	private boolean listIsEmpty() {
-		
-		boolean isEmpty = false;
-		
-		JSONObject JObj = new JSONObject();
-		JObj.put("ActionToPerform", "ChainIsEmpty");
-		
-		try {
-			
-			Socket s = new Socket(guarantorHostname, guarantorPort);
-			
-			OutputStream outputStream = s.getOutputStream();
-			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-			
-			ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
-
-			
-			objectOutputStream.writeObject(JObj);
-			isEmpty = inStream.readBoolean();
-			
-			
-			s.close();
-			objectOutputStream.close();
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		
-		return isEmpty;
-	}	
-	
-	// Send to guaranteer
-	private void addBlock(Block block) {
-		
-		try {
-			Socket s = new Socket(guarantorHostname, guarantorPort);
-			
-			OutputStream outputStream = s.getOutputStream();
-			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-			
-			objectOutputStream.writeObject(block);
-			
-			
-			s.close();
-			objectOutputStream.close();
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		
-		
-	}
-	
-	// TODO: call all block of chain from guaranteer
+	// Call all block of chain from guaranteer
 	private void loadChain() {
 		
-		/*
-		 * 
-		boolean isEmpty = false;
-		
-		JSONObject JObj = new JSONObject();
-		JObj.put("ActionToPerform", "ChainIsEmpty");
-		
 		try {
 			
-			Socket s = new Socket(guarantorHostname, guarantorPort);
-			
-			OutputStream outputStream = s.getOutputStream();
-			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-			
-			ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
+			// Call for all chain
+			JSONObject JObj = new JSONObject();
+			JObj.put("ActionToPerform", "LoadChain");
+
+			Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
 
 			
-			objectOutputStream.writeObject(JObj);
-			isEmpty = inStream.readBoolean();
-			
-			
-			s.close();
-			objectOutputStream.close();
-			
+		    // READ --- errore
+		    try (
+					// Socket  
+		    		
+		    		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+		    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+		    ) {
+
+		    	out.println( JObj.toString() );
+		    	
+		    	Head = AddNextBlock( in );
+		    	
+		    }
+		    
+
+		    s.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
-		 * 
-		 */
-		
-		
-		for (;;) {
-			
-			addBlock( new Block() );
-			
-		}
 		
 	}
+
+	// Metodo ricorsivo per caricare la chain
+	// TODO: Da rivedere che funzioni bene ! ! ! 
+	private Block AddNextBlock( BufferedReader in ) {
+		
+		
+		try {
+			String str = in.readLine();
+						
+			Block nBlock = Block.generateBlockFromJSON( new JSONObject( str ) );
+			
+
+			for ( int i=0; i < nBlock.SiblingBlockNumber(); i++ ) 
+			{	
+				Block b = AddNextBlock( in );
+				nBlock.addSiblingBlock( b );
+			}
+
+
+			if ( nBlock.hasNextBlock() ) 
+			{
+				nBlock.setNextBlock( AddNextBlock( in) ); 
+			}
+
+			// TODO: TO CHECK 
+			// MileStone.put(nBlock.getHash(), nBlock);
+			
+			return nBlock;
+			
+		} catch (IOException e) {
+			return null;
+		}
+				
+	}
+	
 	
 	// Listen connection to node and start "ResponseThread" thread for serve actions
-	class getDataThread extends Thread {
+	private class getDataThread extends Thread {
+		
+		private int localListeningPort;
+		
+		
+		public getDataThread( int localListeningPort) 
+		{
+			this.localListeningPort = localListeningPort;
+		}
 
 		@SuppressWarnings("resource")
 		@Override
@@ -378,87 +292,103 @@ public class Node {
 
 			Object sincronizer = new Object();
 			
+			
 			while ( listenerIsActive ) {
 				
-				try {
-					ServerSocket serverSocket = new ServerSocket( socketPort );
-
+				try (
+					ServerSocket serverSocket = new ServerSocket( localListeningPort );
+				) {
+				
 					// Execute an controller for connection
-					new Node.ResponseThread(serverSocket.accept(), sincronizer, currentTransactionNumeber++).start();
-										
-				} catch (SocketException se) {
-					System.exit(0);
+					(new Node.ResponseThread(serverSocket.accept(), sincronizer)).start();
+					
+					
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-
+				
 			}
-
 		}
-
 	}
 	
 	private class ResponseThread extends Thread {
 		
 		private Socket socket = null;
 		private Object sincronizer = null;
-		private int BlockNumberCounter = 0;
-				
-		public ResponseThread(Socket socket, Object sincronizer, int BlockNumberCounter) 
+			
+		public ResponseThread(Socket socket, Object sincronizer) 
 		{
 			this.socket = socket;
 			this.sincronizer = sincronizer;
-			this.BlockNumberCounter = BlockNumberCounter;
 		}
 		
 		
 		@Override
-		public void run() {
+		public void run() 
+		{
 			
-			try {
+			try (
+					// In out stream
+		            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+		    		BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
+		) {
 				
 				// Response string
 				String returnString = "";
 				
-				
-				// In out stream
-				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
-				PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-			    
-				JSONObject jObj = (JSONObject) inStream.readObject();
+				String input = in.readLine();
+				System.out.println("input: " + input);
 				
 				
+				JSONObject jObj = new JSONObject( input );
 				
-				// TODO: Add other action
+				System.out.println("Action to perform: " + jObj.getString("ActionToPerform") );
+				
+				
+				
+				
+				// TODO: Add other action to perform
 				switch ( jObj.getString("ActionToPerform") ) {
 				
-				case "postTransactionInPool": {
+				case "postTransactionInPool":
 										
-					postTransaction( jObj, this, BlockNumberCounter );
+					postTransaction( jObj, this );
 					break;
-				}
 				
 				case "readTransaction":
 					
 					String transactionNumber = jObj.getString("BlockHash").split("x")[0];
-					returnString = readBlock( jObj );
-					getTransactionFromObject( returnString, transactionNumber );
+					returnString = getTransactionFromObject( readBlock( jObj ), transactionNumber );
 					break;
-					
 					
 				case "readBlock":
 					
 					returnString = readBlock( jObj );
 					break;
 				
-				case "": {
+				case "setNewBlock":
 					
-					synchronized (sincronizer) {
+					synchronized (sincronizer) 
+					{
+						setNewBlock( jObj );
+					}
+					break;
+				
+				case "setNewSCBlock":
+					
+					synchronized (sincronizer) 
+					{
+						setNewSCBlock( jObj );
+					}
+					break;
+				
+				case "":
+					
+					synchronized (sincronizer) 
+					{
 						returnString = "";
 					}
-					
 					break;
-				}
 				
 				default:
 					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
@@ -468,11 +398,6 @@ public class Node {
 								
 				// return response 
 				out.write(returnString);
-
-				// close socket and stream
-				socket.close();
-				inStream.close();
-				out.close();
 			
 			
 			} catch (Exception e) {
@@ -484,6 +409,8 @@ public class Node {
 	
 	
 	
+
+	
 	
 	
 	
@@ -494,26 +421,19 @@ public class Node {
 	 ** 
 	 */
 	
-	private String postTransaction( JSONObject jObj, ResponseThread thisOBJ, int BlockNumberCounter ) {
+	private String postTransaction( JSONObject jObj, ResponseThread thisOBJ ) {
 		
 		String returnString = "";
-		
 		Transaction t = Transaction.ObjFromJSON( jObj.getJSONObject( "Transaction" ) );
-		addTTPool(t);
-		
-		// Add to list and wait for a block creation
-		ResponseThreadList.add( thisOBJ );
-		try { 
-			thisOBJ.wait(); 
-		} catch (InterruptedException e) { e.printStackTrace(); }
 		
 		// Get response from variables
-		returnString = BlockNumberCounter + "x" + lastInsertBlock.getHash();
-		
+		returnString = addTTPool(t);
 		return returnString;
 	}
 	
 	private String readBlock( JSONObject jObj ) {
+		
+		// TODO: case smartContract block ! ! !
 		
 		String returnString = "";
 		String blockName = jObj.getString("BlockHash").split("x")[1];
@@ -522,9 +442,7 @@ public class Node {
 		
 		return returnString;
 	}
-	
-	
-	
+		
 	private String getTransactionFromObject( String returnString, String transactionNumber ) {
 		
 		if ( !returnString.equals("") ) {
@@ -532,17 +450,35 @@ public class Node {
 			JSONObject rObj = new JSONObject(returnString); 
 			JSONObject tr = (JSONObject) rObj.get("Transactions");
 			
-			returnString =  tr.get( transactionNumber ).toString();
+			return tr.get( transactionNumber ).toString();
 			
-		}
+		} 
 		
-		return returnString;
+		return "";
 	}
 	
+	private void setNewBlock( JSONObject jObj ) { 
+		
+		Block nBlock = Block.generateBlockFromJSON( (JSONObject) jObj.get("block") );
+		
+		Tail.setNextBlock( nBlock );
+		Tail = nBlock;
+		
+	}
+
+	private void setNewSCBlock( JSONObject jObj ) { 
+		
+		Block nBlock = Block.generateBlockFromJSON( (JSONObject) jObj.get("block") );
+
+		Block parentBlock = MileStone.get( nBlock.getParentBlockHash() );
+		
+		parentBlock.setNextBlock( parentBlock );
+		
+	}
 	
 	/**
 	 **
-	 ** 	START CHAIN ACTIONS
+	 ** 	END CHAIN ACTIONS
 	 ** 
 	 ** 
 	 */
@@ -590,109 +526,43 @@ public class Node {
 	 * 
 	 * 
 	 * 	Method list:
-	 * 		"addTTPool"			Method for insert into pool a transaction. If pool is full call Method "sendToGuarantor";
-	 * 		"sendToGuarantor"	Create and send a block to guaranteer;
+	 * 		"addTTPool"			Method for send to guaranteer a new transaction
 	 * 
-	 * 
-	 * 	Definition of a Thread timer call "TimerHelper". 
-	 * 		Every certain of time send an order to create and send a new block.
-	 * 		For not send an empty block there is a control for check if pool is not empty. 
 	 * 
 	 */
-	private void addTTPool(Transaction t) 
+	private String addTTPool(Transaction t) 
 	{
-
-		if ( t.getLenght() + pool.size() > blockMaxSize ) 
-		{
-			sendToGuarantor();
-		}
-
-		pool.add( t );
-		
-	}
+		// BlockNumberCounter + "x" + Hash();
+		String transactionIndex = "";
 	
-	// sending procedure for send new block to guaranteer to be checked
-	private void sendToGuarantor() 
-	{
-
-		if ( pool.size() > 0 ) {
-			// Generate node
-			Block n = genereteNewBlock();
-			
-			// Encryption of new node 
-			n.encriptNode();
-			
-			
-			// Send node to guaranteer and receive definitive block
-			
-			Block fixedBlock = null;
+		try (
+				Socket s = new Socket(guarantorHostName, guarantorPort);
+				OutputStreamWriter writer = new OutputStreamWriter(s.getOutputStream());
+		) {
 			
 			JSONObject JObj = new JSONObject();
-			JObj.put("ActionToPerform", "AddBlockToChain");
-			JObj.put("Block", n);
+			JObj.put("ActionToPerform", "AddTransactionToPool");
+			JObj.put("Transaction", t.toJObj() );
 			
-			try {
-				
-				Socket s = new Socket(guarantorHostname, guarantorPort);
-				
-				OutputStream outputStream = s.getOutputStream();
-				ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-				
-				ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
+			
+			// WRITE 
+		    try (OutputStreamWriter out = new OutputStreamWriter( s.getOutputStream(), StandardCharsets.UTF_8)) {
+		        out.write(JObj.toString());
+		    }
 
-				
-				objectOutputStream.writeObject(JObj);
-				fixedBlock = (Block) inStream.readObject();
-				
-				
-				s.close();
-				objectOutputStream.close();
-				
-				
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			}
+		    
+		    // READ
+		    JSONTokener responseTokens = new JSONTokener(s.getInputStream());
+			JSONObject jObj = new JSONObject(responseTokens);
+		    			
 			
-
-			
-			// Set variable about block info 
-			if ( fixedBlock != null ) lastInsertBlock = n;
-			
-			// Notify all waiting client to execute response
-			for( ResponseThread rt : ResponseThreadList ) 
-			{ 
-				rt.notify();	
-			}
-			
-			currentTransactionNumeber = 0;
-			pool.clear();
-			
-			// Set MileStones
-			MileStone.put(fixedBlock.getHash(), fixedBlock);
-			
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-
+		
+		
+		return transactionIndex;
 	}
-
-	// Timer
-	private class TimerHelper extends TimerTask 
-	{
-		private Node node;
-
-		public TimerHelper(Node node) 
-		{
-			this.node = node;
-		}
-
-		@Override
-		public void run()
-		{	        
-			node.sendToGuarantor();
-		}
-	}
-
 
 	
 
@@ -711,29 +581,27 @@ public class Node {
 
 	// TODO: ReadChain
 	
-	// creation of a block
-	private Block genereteNewBlock() {
-		
-		Block block = new Block();
-		
-		
-		if (Head == null ) {
-			// TODO block zero 
-			
-			
-		} else {
-			// TODO: Block from pool
-			
-		}
-		
-		
-		return block;
-		
-	}
-	
 	public void setListenerIsActive( boolean active ) {
 		this.listenerIsActive = active;
 	}
+	
+	public String getIndex() {
+		return index;
+	}
+
+	public void setIndex(String index) {
+		this.index = index;
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	
@@ -750,6 +618,10 @@ public class Node {
 	// TODO: Lettura di una transazione da parte di un un utente
 
 	// TODO: Gestisce gli utenti ? 
+
+	public Block getHead() {
+		return Head;
+	}
 
 	// TODO:  get of variables
 	public PublicKey getPublicKey() 
@@ -814,6 +686,9 @@ public class Node {
 	
 	
 	
+	
+	
+	
 	/*
 	 * 
 	 * 		MAIN
@@ -825,21 +700,26 @@ public class Node {
 	 * 
 	 */
 	public static void main(String[] args) {
+
 		
 		boolean isRunning = true;
 		
+		System.out.println("Run:");
 		
-		String hostLocal = "";
-		int portLocal = 1;
 		
-		String hostGuaranteer = "";
-		int portGuaranteer = 1;
+		int portLocal = 8081;
+		
+		String hostGuaranteer = "localhost";
+		int portGuaranteer = 8082;
 		
 		
 		Node node = null;
 		try {
-			node = new Node( hostLocal, portLocal,
-						hostGuaranteer, portGuaranteer );
+			
+			System.out.println("Start new Node: ");
+			node = new Node( portLocal, hostGuaranteer, portGuaranteer );
+			System.out.println("Node is start with success.");			
+			
 			
 			Scanner s = new Scanner(System.in);
 			
@@ -849,7 +729,7 @@ public class Node {
 			    String userInput = s.next();
 			    
 			    
-			    // TODO: Add new actions
+			    // TODO: Add new actions to perform
 			    switch (userInput) {
 				case "stop": {
 					
@@ -876,7 +756,7 @@ public class Node {
 			
 		} catch (Exception e) {
 			e.printStackTrace();
-		}	
+		}
 	}
 
 }
