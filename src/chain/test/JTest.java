@@ -17,10 +17,10 @@ public class JTest {
 		
 		// PORTS DEFINITION
 		String hostNode = "localhost";
-		int portNode = 8083;
+		int portNode = 8081;
 		
 		String hostGuaranteer = "localhost";
-		int portGuaranteer = 8084;
+		int portGuaranteer = 8082;
 
 		
 		
@@ -30,7 +30,7 @@ public class JTest {
 		System.err.println("\nGuaranteer is start with success on port: " + portGuaranteer);
 		
 		// NODE
-		System.out.println("Start new Node: ");
+		System.out.println("\nStart new Node: ");
 		Node node = new Node( portNode, hostGuaranteer, portGuaranteer );
 		System.err.println("Node is start with success on  port: " + portNode);
         
@@ -39,6 +39,7 @@ public class JTest {
 		
 		
 		// USERS
+		System.err.println("\nStart user 1");
 		Users u = new Users("1", 100, 5);
 		u.generateRSAKkeyPair();
 		System.err.println("User is start  with success.");
@@ -46,6 +47,8 @@ public class JTest {
 	    
 		
 	    
+		
+		
 	    
 		
 		// TESTS 
@@ -54,14 +57,16 @@ public class JTest {
 		testTras.put("data", "testInput di testo arbitrario");
 		
 	    Transaction t = new Transaction(u, testTras);
-	    System.out.println("t: " + t);
+	    System.out.println("Transaction: " + t);
 	    
 	    
-	    // send some data to node
-	    String transactionIndex = u.sendTransaction( t, hostNode, portNode);	
-	    System.err.println("transactionIndex: " + transactionIndex);
-		
-	    
+	    try {
+		    // send some data to node
+		    JSONObject transactionIndex = new JSONObject( u.sendTransaction( t, hostNode, portNode) );	
+		    System.err.println("BlockIndex: " +  transactionIndex.get("BlockIndex") );
+	    } catch (Exception e) {
+			e.printStackTrace();
+		}
 		
 	    
 	    

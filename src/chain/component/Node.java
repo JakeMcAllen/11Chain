@@ -232,8 +232,8 @@ public class Node {
 		    	
 		    }
 		    
-
 		    s.close();
+		    
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -286,7 +286,6 @@ public class Node {
 			this.localListeningPort = localListeningPort;
 		}
 
-		@SuppressWarnings("resource")
 		@Override
 		public void run() {
 
@@ -335,13 +334,9 @@ public class Node {
 				
 				// Response string
 				String returnString = "";
-				
 				String input = in.readLine();
-				System.out.println("input: " + input);
-				
 				
 				JSONObject jObj = new JSONObject( input );
-				
 				System.out.println("Action to perform: " + jObj.getString("ActionToPerform") );
 				
 				
@@ -352,7 +347,7 @@ public class Node {
 				
 				case "postTransactionInPool":
 										
-					postTransaction( jObj, this );
+					returnString = postTransaction( input );
 					break;
 				
 				case "readTransaction":
@@ -394,10 +389,9 @@ public class Node {
 					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 				}
 				
-				
-								
+					
 				// return response 
-				out.write(returnString);
+				out.println(returnString);
 			
 			
 			} catch (Exception e) {
@@ -421,13 +415,12 @@ public class Node {
 	 ** 
 	 */
 	
-	private String postTransaction( JSONObject jObj, ResponseThread thisOBJ ) {
+	private String postTransaction( String input ) {
 		
 		String returnString = "";
-		Transaction t = Transaction.ObjFromJSON( jObj.getJSONObject( "Transaction" ) );
 		
 		// Get response from variables
-		returnString = addTTPool(t);
+		returnString = addTTPool(input);
 		return returnString;
 	}
 	
@@ -436,6 +429,7 @@ public class Node {
 		// TODO: case smartContract block ! ! !
 		
 		String returnString = "";
+		System.err.println("Error in Node: readBlock");
 		String blockName = jObj.getString("BlockHash").split("x")[1];
 				
 		MileStone.get(blockName);
@@ -448,6 +442,8 @@ public class Node {
 		if ( !returnString.equals("") ) {
 			
 			JSONObject rObj = new JSONObject(returnString); 
+			System.err.println("Error in Node: readBlock");
+
 			JSONObject tr = (JSONObject) rObj.get("Transactions");
 			
 			return tr.get( transactionNumber ).toString();
@@ -530,36 +526,34 @@ public class Node {
 	 * 
 	 * 
 	 */
-	private String addTTPool(Transaction t) 
+	private String addTTPool(String input) 
 	{
 		// BlockNumberCounter + "x" + Hash();
 		String transactionIndex = "";
-	
-		try (
-				Socket s = new Socket(guarantorHostName, guarantorPort);
-				OutputStreamWriter writer = new OutputStreamWriter(s.getOutputStream());
-		) {
-			
-			JSONObject JObj = new JSONObject();
-			JObj.put("ActionToPerform", "AddTransactionToPool");
-			JObj.put("Transaction", t.toJObj() );
-			
-			
-			// WRITE 
-		    try (OutputStreamWriter out = new OutputStreamWriter( s.getOutputStream(), StandardCharsets.UTF_8)) {
-		        out.write(JObj.toString());
-		    }
 
-		    
-		    // READ
-		    JSONTokener responseTokens = new JSONTokener(s.getInputStream());
-			JSONObject jObj = new JSONObject(responseTokens);
-		    			
+		try {
+			Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
 			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+			try (
+					PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+		    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+			) {
+			    
+			    // READ
+		    	out.println( input );
+		    	
+		    	transactionIndex = in.readLine();
+	
+		    	
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			s.close();
 		
+		} catch (Exception e) {
+			e.printStackTrace();
+		}		
 		
 		return transactionIndex;
 	}

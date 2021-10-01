@@ -119,8 +119,6 @@ public class Block {
 
 	
 	
-	
-	
 	public String getHash() 
 	{
 		return hash;

@@ -317,7 +317,7 @@ public class Guaranteer {
 	 */
 
 	// Listen connection to node and start "ResponseThread" thread for serve actions
-	class getDataThread extends Thread 
+	private class getDataThread extends Thread 
 	{
 		private Guaranteer guaranteer;
 		private int socketPort;
@@ -329,7 +329,6 @@ public class Guaranteer {
 			System.out.println("\t-Listener 'getDataThread'\t: Is Start");
 		}
 
-		@SuppressWarnings("resource")
 		@Override
 		public void run() 
 		{
@@ -338,10 +337,17 @@ public class Guaranteer {
 
 			while ( guaranteer.getListenerIsActive() ) {
 
-				try ( ServerSocket serverSocket = new ServerSocket( this.socketPort ) ) {
-
+				try (
+						ServerSocket serverSocket = new ServerSocket( this.socketPort );
+				) {
+					
+					// Execute an controller for serve action
+					(new Guaranteer.ResponseThread(serverSocket.accept(), sincronizer, this.guaranteer)).start();
+					
+					
 					// Execute an controller for connection
 
+					
 				} catch (SocketException se) {
 					se.printStackTrace();
 					System.exit(0);
@@ -354,8 +360,8 @@ public class Guaranteer {
 			if (!guaranteer.listenerIsActive) System.exit(0);
 		}
 	}
-
-	class ResponseThread extends Thread {
+	
+	private class ResponseThread extends Thread {
 
 		private Socket socket = null;
 		private Object sincronizer = null;
@@ -373,14 +379,13 @@ public class Guaranteer {
 		@Override
 		public void run() 
 		{
-			
+						
 			try {
 
 				// Response JSONObject and input obj
 				JSONObject returnObj = new JSONObject();
 				JSONObject jObj = null;
-
-
+				
 				// READ
 				try (
 						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -394,7 +399,7 @@ public class Guaranteer {
 
 					
 					
-					System.out.println("\n\n-Serving action: " + jObj.getString("ActionToPerform") + "\n\n");
+					System.out.println("\n\t-Serving action: " + jObj.getString("ActionToPerform")  + "\n\n");
 
 
 
@@ -402,8 +407,9 @@ public class Guaranteer {
 					switch ( jObj.getString("ActionToPerform") ) {
 
 					case "postTransactionInPool":
-
-						returnObj.put("ResponseString", this.guaranteer.addTTPool( (Transaction) jObj.get("Transaction") ) );
+						
+						JSONObject trOb = (JSONObject) jObj.get("Transaction");
+						returnObj.put("BlockIndex", this.guaranteer.addTTPool( new Transaction( trOb ) ) );
 						break;
 
 					case "setNewNodeConnection":
@@ -431,11 +437,8 @@ public class Guaranteer {
 					}
 
 
-
-
 					// WRITE return message
 					out.println( returnObj.toString() );
-
 
 				}
 

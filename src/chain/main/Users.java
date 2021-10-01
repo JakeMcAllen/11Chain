@@ -86,7 +86,6 @@ public class Users {
 
 
 
-
 	public String getIndex() {
 		return index;
 	}
@@ -167,6 +166,12 @@ public class Users {
 		
 		this.publicKey = key.getPublic();
 		this.privateKey = key.getPrivate();
+		
+		
+		System.out.println("\n\n----------KEYS CREATION END----------" + "\n" + 
+				"Private key: " + this.getPrivateKey() + "\n" + 
+				"Public key: " + this.getPublicKey() + "\n" + 
+				"----------KEYS CREATION START----------\n\n" );
 	}
 	
 	// Send transaction
@@ -188,14 +193,8 @@ public class Users {
 		    		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 		    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
 		    ) {
-		    	// Errore
 		    	out.println( jObj.toString() );
 		    	returnStr = in.readLine();
-		    	
-				System.out.println("----------KEYS CREATION END----------" + "\n" + 
-						"Private key: " + this.getPrivateKey() + "\n" + 
-						"Public key: " + this.getPublicKey() + "\n" + 
-						"----------KEYS CREATION START----------" );
 		    }
 		    
 
@@ -232,8 +231,6 @@ public class Users {
 			ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
 			
 			objectOutputStream.writeObject( jsonObject );
-			System.out.println("Transaction sent.");
-			System.out.println("Transaction index: " + inStream.readUTF() );
 			
 			
 			s.close();
@@ -302,11 +299,6 @@ public class Users {
 					{
 						u.generateRSAKkeyPair();
 					}
-					
-					System.out.println("----------KEYS CREATION END----------" + "\n" + 
-							"Private key: " + u.getPrivateKey() + "\n" + 
-							"Public key: " + u.getPublicKey() + "\n" + 
-							"----------KEYS CREATION START----------" );
 					
 					break;
 				}

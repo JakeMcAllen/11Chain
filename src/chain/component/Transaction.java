@@ -36,6 +36,9 @@ public class Transaction {
 		this(str, new JSONObject( str ) );
 	}
 	
+	public Transaction(JSONObject jObj) {
+		this( jObj.get("userId").toString() , jObj );
+	}	
 
 
 	  
@@ -63,7 +66,6 @@ public class Transaction {
 		data.append("data", str);
 		
 	}
-	
 	
 	
 	public void setObject(File file) 
@@ -137,9 +139,9 @@ public class Transaction {
 		JSONObject jObj = new JSONObject();
 		
 		jObj.append("data", this.data);
-		jObj.append("userId", user.getIndex());
-		
-		
+ 		jObj.append("userId", user.getIndex() );
+
+
 		return jObj;
 		
 	}
