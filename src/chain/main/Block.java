@@ -1,11 +1,13 @@
 package chain.main;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.InvalidKeyException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.crypto.BadPaddingException;
@@ -14,6 +16,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import org.json.JSONObject;
+
 
 
 /*
@@ -35,7 +38,7 @@ public class Block {
 	// Hash code of block and data of block ( Transactions )
 	private String hash;
 	
-	private byte[] data;
+	private byte[] data = null;
 	
 	
 	
@@ -120,16 +123,34 @@ public class Block {
 	
 	
 	public String getHash() 
-	{
+	{			
 		return hash;
 	}
 	
 	public byte[] getData() {
 		return data;
 	}
-
+	
+	public String getDataToString() {
+		return new String( this.data );
+	}
+	
 	public void setData(byte[] data) {
-		this.data = data;
+		ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+		
+		try {
+			if (this.data != null) { 
+				arrayOutputStream.write( this.data );
+				arrayOutputStream.write( data );
+			
+				this.data = arrayOutputStream.toByteArray();
+			} else {
+				this.data = data;
+			}
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public String getIndex() {
@@ -228,8 +249,11 @@ public class Block {
 		this.siblingBlock = siblingBlock;
 	}
 
-	public void setNextBlock( Block b ) {
-		if ( nextBlock != null ) nextBlock = b;
+	public Block setNextBlock( Block b ) {
+		nextBlock = b;
+		this.hasNext = true;
+		
+		return b;
 	}
 	
 	public Block getNextBlock() {
@@ -246,7 +270,7 @@ public class Block {
 	
 	public int SiblingBlockNumber () {
 		return numberOfSiblingBlock;
-	}
+	}  
 	
 	public boolean hasNextBlock() {
 		return hasNext;
@@ -266,10 +290,12 @@ public class Block {
 	
 	public static Block generateBlockFromJSON( JSONObject jObj ) 
 	{	
+		
+		
 		Block b = new Block();
 		
 		
-		if ( jObj.has("data") ) b.setData( (byte[]) jObj.get( "data" ) );
+		if ( jObj.has("data") ) b.setData( (byte[]) jObj.get( "data" ).toString().getBytes() );
 		if ( jObj.has("gas") ) b.setGas( jObj.getInt("gas") );
 		if ( jObj.has("hash") ) b.setHash( jObj.getString("hash") );
 		
@@ -282,6 +308,7 @@ public class Block {
 		if ( jObj.has("timeData") ) b.setTimeData( LocalDateTime.parse( jObj.getString("timeData") ) );
 		
 		
+		System.out.println("generateBlockFromJSON: " + b);
 		
 		return b;
 	}
@@ -318,13 +345,47 @@ public class Block {
 	
 	@Override
 	public String toString() {
-		return "Block [hash=" + hash + ", data=" + Arrays.toString(data) + ", index=" + index + ", status=" + status
+		return "Block [hash=" + hash + ", index=" + index + ", status=" + status
 				+ ", timeData=" + timeData + ", size=" + size + ", gas=" + gas + ", parentNode=" + parentNode
 				+ ", listSCDataConnected=" + listSCDataConnected + ", parentHash=" + parentHash + ", hasNext=" + hasNext
-				+ ", numberOfSiblingBlock=" + numberOfSiblingBlock + ", parentBlock=" + parentBlock + ", nextBlock="
-				+ nextBlock + ", siblingBlock=" + siblingBlock + "]";
+				+ ", numberOfSiblingBlock=" + numberOfSiblingBlock + ", parentBlock=" + parentBlock + ", siblingBlock=" + siblingBlock + "]";
 	}
 
+	
+	
+	
+	
+	
+	public void generateHash(KeyPair key) { 
+		
+		Cipher cipher;
+		try {
+			cipher = Cipher.getInstance("RSA");
+			
+			cipher.init( Cipher.ENCRYPT_MODE, key.getPrivate() );
+
+			this.data = cipher.doFinal( this.data );
+			
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+
+	}
+	
 	
 	
 	

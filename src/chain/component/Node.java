@@ -92,6 +92,7 @@ public class Node {
 	
 
 	// socket port of node and hostName and Port of Guaranteer
+	private String socketHostName;
 	private int socketPort;
 
 	private String guarantorHostName;
@@ -103,7 +104,7 @@ public class Node {
 	private boolean listenerIsActive = true;
 
 	// index of node
-	private String index;
+	private int index;
 	
 
 
@@ -146,7 +147,7 @@ public class Node {
 	 *   
 	 *  
 	 */
-	public Node( int localPort, String guarenteerHostName, int guaranteerPort )  
+	public Node(String socketHostName, int localPort, String guarenteerHostName, int guaranteerPort, int nodeIndex )  
 	{
 		// call to standard constructor
 		// Set Keys
@@ -166,11 +167,14 @@ public class Node {
 		this.guarantorHostName = guarenteerHostName;
 		this.guarantorPort = guaranteerPort;
 		
+		this.socketHostName = socketHostName;
 		this.socketPort = localPort;
+		
+		this.index = nodeIndex;
 		
 		
 		// Start listener module
-		(new Node.getDataThread( this.socketPort )).start();
+		(new Node.getDataThread( this.socketPort, this )).start();
 		
 		// Load chain from guaranteer
 		loadChain();
@@ -279,11 +283,12 @@ public class Node {
 	private class getDataThread extends Thread {
 		
 		private int localListeningPort;
+		private Node node;
 		
-		
-		public getDataThread( int localListeningPort) 
+		public getDataThread( int localListeningPort, Node node) 
 		{
 			this.localListeningPort = localListeningPort;
+			this.node = node;
 		}
 
 		@Override
@@ -299,7 +304,7 @@ public class Node {
 				) {
 				
 					// Execute an controller for connection
-					(new Node.ResponseThread(serverSocket.accept(), sincronizer)).start();
+					(new Node.ResponseThread(serverSocket.accept(), sincronizer, this.node)).start();
 					
 					
 				} catch (IOException e) {
@@ -314,11 +319,13 @@ public class Node {
 		
 		private Socket socket = null;
 		private Object sincronizer = null;
+		private Node node;
 			
-		public ResponseThread(Socket socket, Object sincronizer) 
+		public ResponseThread(Socket socket, Object sincronizer, Node node) 
 		{
 			this.socket = socket;
 			this.sincronizer = sincronizer;
+			this.node = node;
 		}
 		
 		
@@ -330,30 +337,45 @@ public class Node {
 					// In out stream
 		            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 		    		BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-		) {
+			) {
 				
 				// Response string
 				String returnString = "";
 				String input = in.readLine();
-				
+
+
 				JSONObject jObj = new JSONObject( input );
-				System.out.println("Action to perform: " + jObj.getString("ActionToPerform") );
+				System.out.println("Action to perform N: " + jObj.getString("ActionToPerform") );
 				
+
 				
+
+
 				
 				
 				// TODO: Add other action to perform
 				switch ( jObj.getString("ActionToPerform") ) {
 				
 				case "postTransactionInPool":
-										
-					returnString = postTransaction( input );
+					
+					JSONObject nodeInfo = new JSONObject();
+					nodeInfo.put("HostName", this.node.socketHostName);
+					nodeInfo.put("Port", this.node.socketPort);
+					nodeInfo.put("nodeIndex", this.node.index);
+					
+					
+					jObj.put("NodeInfo", nodeInfo);
+					
+					
+					returnString = postTransaction( jObj.toString() );
 					break;
 				
 				case "readTransaction":
 					
 					String transactionNumber = jObj.getString("BlockHash").split("x")[0];
 					returnString = getTransactionFromObject( readBlock( jObj ), transactionNumber );
+					
+					
 					break;
 					
 				case "readBlock":
@@ -376,7 +398,7 @@ public class Node {
 						setNewSCBlock( jObj );
 					}
 					break;
-				
+
 				case "":
 					
 					synchronized (sincronizer) 
@@ -384,7 +406,7 @@ public class Node {
 						returnString = "";
 					}
 					break;
-				
+					
 				default:
 					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 				}
@@ -395,7 +417,7 @@ public class Node {
 			
 			
 			} catch (Exception e) {
-				System.err.println("Error in 'ResponseThread': " + e.getMessage() );		
+				System.err.println("Error in 'ResponseThread Node': " + e.getMessage() );		
 			}
 		}
 		
@@ -453,12 +475,24 @@ public class Node {
 		return "";
 	}
 	
-	private void setNewBlock( JSONObject jObj ) { 
+	private void setNewBlock( JSONObject jObj ) 
+	{
 		
-		Block nBlock = Block.generateBlockFromJSON( (JSONObject) jObj.get("block") );
+		System.out.println("jObj: " + jObj.getJSONObject("NewBlock") );
 		
-		Tail.setNextBlock( nBlock );
-		Tail = nBlock;
+		
+		Block nBlock = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
+		
+		// Non si vede mai ... si germa prima ! ! ! 
+		System.err.println("nBlock: " + nBlock);
+		
+		if (this.Tail != null )
+		{
+			Tail.setNextBlock( nBlock );
+			Tail = nBlock;
+		} else {
+			Head = Tail = nBlock;
+		}
 		
 	}
 
@@ -579,11 +613,11 @@ public class Node {
 		this.listenerIsActive = active;
 	}
 	
-	public String getIndex() {
+	public int getIndex() {
 		return index;
 	}
 
-	public void setIndex(String index) {
+	public void setIndex(int index) {
 		this.index = index;
 	}
 	
@@ -711,7 +745,7 @@ public class Node {
 		try {
 			
 			System.out.println("Start new Node: ");
-			node = new Node( portLocal, hostGuaranteer, portGuaranteer );
+			node = new Node(hostGuaranteer, portLocal, hostGuaranteer, portGuaranteer, 0 );
 			System.out.println("Node is start with success.");			
 			
 			

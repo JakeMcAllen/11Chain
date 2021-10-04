@@ -10,6 +10,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,7 +19,9 @@ import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
+import org.w3c.dom.NodeList;
 
 import chain.component.Transaction;
 
@@ -45,6 +49,8 @@ public class Guaranteer {
 
 	// lista delle info del nodo
 	private List<Guaranteer.NodeInfo> nodeList;
+	private List<Guaranteer.UsersData> userDataList;
+
 
 	private List<Transaction> pool;
 	private Block lastInsertBlock;
@@ -81,7 +87,8 @@ public class Guaranteer {
 	 * 	Time for send a new block to guaranteer is set in second, but in the thread " TimerHelper " is used in milliseconds
 	 *  
 	 */
-	private final int blockMaxSize = 500;
+	// TODO: Per ora è in numero di transazioni. Vai a modificare il controllo su "pool.size"
+	private final int blockMaxSize = 5;
 	private final int timeToSendBlock = 5;
 
 	private boolean listenerIsActive = true;
@@ -101,6 +108,8 @@ public class Guaranteer {
 
 
 		nodeList = new ArrayList<Guaranteer.NodeInfo> ();
+		userDataList = new ArrayList<Guaranteer.UsersData> ();
+
 
 
 
@@ -117,7 +126,7 @@ public class Guaranteer {
 		// TODO: BlockZero sent hash and default data
 		Block blockZero = new Block();
 		blockZero.setIndex( "0a" );
-		this.currentBlockIndex = "0a";
+		this.currentBlockIndex = "1a";
 
 		this.Head = this.Tail = blockZero;
 
@@ -164,25 +173,32 @@ public class Guaranteer {
 	 */
 	private String addTTPool(Transaction t) 
 	{
+		String transactionIndex = "";
+
 		// creation of a new block
-		if ( pool.size() > blockMaxSize ) 
+		if ( ( pool.size() > blockMaxSize || t == null ) && pool.size() != 0 ) 
 		{
-			creteNode.newNode(pool, currentBlockIndex);
 			currentTransactionNumeber = 0;
+			creteNode.newNode(pool, currentBlockIndex);
+
+			currentBlockIndex = ( Integer.parseInt( currentBlockIndex.substring(0, 1) ) + 1 ) + currentBlockIndex.substring(1); 
 			pool.clear();
 		}
 
 		// Add transaction to pool
 		if (t != null) {
 			pool.add( t );
-			currentTransactionNumeber++;
+			// currentTransactionNumeber++;
+
 
 			// return an index to caller
-			currentBlockIndex = ( Integer.parseInt( currentBlockIndex.substring(0, 1) ) + 1 ) + currentBlockIndex.substring(1); 
-			return currentTransactionNumeber + "x" + currentBlockIndex;
+			transactionIndex = ++currentTransactionNumeber + "x" + currentBlockIndex;
+
+			System.err.println("\t\t---\t- " + currentTransactionNumeber + "x" + currentBlockIndex);
+
 		}
 
-		return "";
+		return transactionIndex;
 	}
 
 
@@ -202,16 +218,14 @@ public class Guaranteer {
 			if ( pool.size() > 0 ) {
 
 				// TODO: Creation of a new block
-				Block b = new Block();				
+				Block b = new Block();
+				b.setIndex(currentBlockIndex);
 
-				currentBlockIndex = b.getIndex();
 
+				for ( Transaction t : pool ) {					
+					b.setData( t.getByte() );
+				}
 
-				pool.stream().forEach( e -> {
-
-					b.setData( b.getData().toString().concat( b.getData().toString() ).getBytes() );
-
-				});
 
 				// TODO:
 				// generate Hash and all other variables ! 
@@ -219,18 +233,11 @@ public class Guaranteer {
 				b.setIndex(currentBlockIndex);
 
 
-
-				// Set MileStones
-				MileStone.put(b.getHash(), b);
-
-
+				// TODO: Fare in modo che la chaive creata sia presa da una lista privata
+				// b.generateHash( userDataList.get( ( (Transaction) pool.get( pool.size() -1 ) ).getUserID() ) );
 
 				guaranteer.addBlock(b);
 
-
-				JSONObject JObj = new JSONObject();
-				JObj.put("ActionToPerform", "setNewBlock");
-				JObj.put("block", b);
 
 
 
@@ -239,28 +246,49 @@ public class Guaranteer {
 
 
 					try {
-						Socket s = new Socket(e.getNodeHostName(), e.getNodePort());
 
-						OutputStream outputStream = s.getOutputStream();
-						ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+						System.out.println("e.getNodeHostName(), e.getNodePort(): " + e.getNodeHostName() + "  " +  e.getNodePort());
+						System.out.println("guaranteer.socketPort: " + guaranteer.socketPort);
+						
+					    try (
+								Socket s = new Socket(e.getNodeHostName(), e.getNodePort());
 
-						ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
+					            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+					    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+					    ) {
+					    	
+					    	JSONObject jObj = new JSONObject();
+					    	jObj.put("ActionToPerform", "setNewBlock");
+					    	jObj.put("NewBlock", b.toJSON() );
 
+					    	
+					    	out.println( jObj.toString() );
 
-						objectOutputStream.writeObject(JObj);
-
-						// transactionIndex = inStream.readUTF();
-						// TODO: diversa azione in base alla risposta. 
-
-						s.close();
-						objectOutputStream.close();
-						inStream.close();
-
+					    }
+						
+						
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}
 
 				});
+
+
+				Block nextB = null;					
+				do {
+					nextB = (nextB == null) ? Head : nextB.getNextBlock();
+					JSONObject jObj = nextB.toJSON();
+
+					try 
+						{ System.out.println( jObj.get("index") + " - " + new JSONArray( jObj.get("data") ) ); } 
+					catch (Exception e) 
+						{ System.out.println("BlockZero"); }
+
+				} while (nextB.hasNextBlock()) ;
+
+
+
+
 			}
 
 			if (!guaranteer.listenerIsActive) System.exit(0);
@@ -288,8 +316,8 @@ public class Guaranteer {
 
 
 	private void addBlock( Block block) 
-	{	
-		Tail.setNextBlock( block );	
+	{
+		Tail = Tail.setNextBlock( block );
 	}
 
 
@@ -338,16 +366,16 @@ public class Guaranteer {
 			while ( guaranteer.getListenerIsActive() ) {
 
 				try (
-						ServerSocket serverSocket = new ServerSocket( this.socketPort );
+					ServerSocket serverSocket = new ServerSocket( this.socketPort );
 				) {
-					
+
 					// Execute an controller for serve action
 					(new Guaranteer.ResponseThread(serverSocket.accept(), sincronizer, this.guaranteer)).start();
-					
-					
+
+
 					// Execute an controller for connection
 
-					
+
 				} catch (SocketException se) {
 					se.printStackTrace();
 					System.exit(0);
@@ -360,7 +388,7 @@ public class Guaranteer {
 			if (!guaranteer.listenerIsActive) System.exit(0);
 		}
 	}
-	
+
 	private class ResponseThread extends Thread {
 
 		private Socket socket = null;
@@ -372,42 +400,66 @@ public class Guaranteer {
 			this.socket = socket;
 			this.sincronizer = sincronizer;
 			this.guaranteer = guaranteer;
-
-			System.out.println("ResponseThread start ! ! !");
 		}
 
 		@Override
 		public void run() 
 		{
-						
+
 			try {
 
 				// Response JSONObject and input obj
 				JSONObject returnObj = new JSONObject();
 				JSONObject jObj = null;
+
+				String currentIndex = currentBlockIndex;
+
+				
 				
 				// READ
 				try (
 						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 						BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-				) {
+						) {
 
 					jObj = new JSONObject(in.readLine());
-
-					
-					// TODO: aDD NODE IN the node LIST   ! ! ! 
-
 					
 					
-					System.out.println("\n\t-Serving action: " + jObj.getString("ActionToPerform")  + "\n\n");
-
-
+					// aDD NODE IN the node LIST
+					if ( jObj.has("NodeInfo") ) 
+					{
+						JSONObject nodeInfo = (JSONObject) jObj.get("NodeInfo");
+						
+						boolean isPresent = false;
+						for (NodeInfo nt : nodeList ) {
+							
+							if ( nt.getNodeIndex() == nodeInfo.getInt("nodeIndex") ) 
+							{
+								isPresent = true;
+							}
+							
+						}
+						
+						
+						if ( !isPresent || nodeList.isEmpty() ) {
+							NodeInfo ni = new NodeInfo();
+							ni.setNodeHostName( nodeInfo.getString("HostName") );
+							ni.setNodePort( nodeInfo.getInt("Port") );
+							ni.setNodeIndex( nodeInfo.getInt("nodeIndex") );
+							ni.setConfidence( 1 );
+							
+							nodeList.add( ni );
+						}
+						
+					}					
+					
+					
 
 					// TODO: Add other action to perform
 					switch ( jObj.getString("ActionToPerform") ) {
 
 					case "postTransactionInPool":
-						
+
 						JSONObject trOb = (JSONObject) jObj.get("Transaction");
 						returnObj.put("BlockIndex", this.guaranteer.addTTPool( new Transaction( trOb ) ) );
 						break;
@@ -422,6 +474,7 @@ public class Guaranteer {
 						break;
 
 					case "newNode": 
+												
 						synchronized (sincronizer) {
 							returnObj.put("ResponseString", addNewNode(jObj) );
 						}
@@ -430,7 +483,7 @@ public class Guaranteer {
 					case "LoadChain":
 						returnObj.put("ResponseString", loadChain(out, Head) );
 						break;
-
+						
 					default:
 						returnObj.put("ResponseString", "Inaspected error. Stop and restart application." );
 						throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
@@ -442,12 +495,20 @@ public class Guaranteer {
 
 				}
 
-				
+
 				// close socket and stream
 				socket.close();
 				
+				
+				// TODO: If new block send it to all nodes !
+				if ( currentIndex != currentBlockIndex) {
+					
+					
+				}
+
+
 			} catch (IOException e) {
-				System.err.println("IOException in 'ResponseThread': " + e.getMessage() );		
+				System.err.println("IOException in 'ResponseThread' Guarantter: " + e.getMessage() );		
 			}
 		}
 
@@ -462,20 +523,20 @@ public class Guaranteer {
 	 */
 	public String loadChain(PrintWriter out, Block currentBlock) {
 
-				
+
 		out.println( currentBlock.toJSON().toString() );
-		
+
 		for ( int i=0; i < currentBlock.getNumberOfSiblingBlock(); i++ ) 
 		{
 			loadChain(out, currentBlock.getSiblingBlock().get(i));
 		}
-		
+
 		if (currentBlock.hasNextBlock()) 
 		{
 			loadChain(out, currentBlock.getNextBlock() );
 		}
 
-		
+
 		return "OK";
 	}
 
@@ -509,8 +570,8 @@ public class Guaranteer {
 		if ( nodeList
 				.stream()
 				.filter( 
-						inf -> inf.getNodeIndex().equals( jo.get("Index") )
-						)
+						inf -> inf.getNodeIndex() == jo.getInt("Index")
+				)
 				.count() > 0 ) 
 		{
 			return "nodeAddFail";
@@ -518,7 +579,7 @@ public class Guaranteer {
 
 		nodeList.add( 
 				new NodeInfo(
-						jo.getString("Index"),
+						jo.getInt("Index"),
 						jo.getString("HostName"),
 						jo.getInt("Port")
 						) );
@@ -544,6 +605,109 @@ public class Guaranteer {
 
 
 
+	private class UsersData {
+
+		private String index;
+
+		private String name;
+
+
+
+		// Keys
+		private PrivateKey privateKey = null;
+		private PublicKey publicKey = null;
+
+
+		// Balance
+		private long balance;
+
+		// Permissions   from 0 to 5   ( from Low to Hight )
+		private int permissions;
+
+		// data
+		private byte[] data;
+
+
+		public UsersData() {
+		}
+
+		public UsersData(String index, String name, PrivateKey privateKey, PublicKey publicKey, long balance,
+				int permissions, byte[] data) {
+			super();
+			this.index = index;
+			this.name = name;
+			this.privateKey = privateKey;
+			this.publicKey = publicKey;
+			this.balance = balance;
+			this.permissions = permissions;
+			this.data = data;
+		}
+
+
+
+
+
+
+		public String getIndex() {
+			return index;
+		}
+
+		public void setIndex(String index) {
+			this.index = index;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public void setName(String name) {
+			this.name = name;
+		}
+
+		public PrivateKey getPrivateKey() {
+			return privateKey;
+		}
+
+		public void setPrivateKey(PrivateKey privateKey) {
+			this.privateKey = privateKey;
+		}
+
+		public PublicKey getPublicKey() {
+			return publicKey;
+		}
+
+		public void setPublicKey(PublicKey publicKey) {
+			this.publicKey = publicKey;
+		}
+
+		public long getBalance() {
+			return balance;
+		}
+
+		public void setBalance(long balance) {
+			this.balance = balance;
+		}
+
+		public int getPermissions() {
+			return permissions;
+		}
+
+		public void setPermissions(int permissions) {
+			this.permissions = permissions;
+		}
+
+		public byte[] getData() {
+			return data;
+		}
+
+		public void setData(byte[] data) {
+			this.data = data;
+		}
+
+
+
+	}
+
 
 	/**
 	 * 
@@ -555,7 +719,7 @@ public class Guaranteer {
 	 */
 	private class NodeInfo {
 
-		private String nodeIndex;
+		private int nodeIndex;
 		private String nodeHostName;
 		private int nodePort;
 
@@ -568,7 +732,7 @@ public class Guaranteer {
 		public NodeInfo() {
 		}
 
-		public NodeInfo(String nodeIndex, String nodeHostName, int nodePort) {
+		public NodeInfo(int nodeIndex, String nodeHostName, int nodePort) {
 			super();
 			this.nodeIndex = nodeIndex;
 			this.nodeHostName = nodeHostName;
@@ -583,11 +747,11 @@ public class Guaranteer {
 
 
 
-		public String getNodeIndex() {
+		public int getNodeIndex() {
 			return nodeIndex;
 		}
 
-		public void setNodeIndex(String nodeIndex) {
+		public void setNodeIndex(int nodeIndex) {
 			this.nodeIndex = nodeIndex;
 		}
 
@@ -620,8 +784,15 @@ public class Guaranteer {
 			this.confidence = confidence;
 		}
 
-
-
+		
+		
+		
+		@Override
+		public String toString() {
+			return "NodeInfo [nodeIndex=" + nodeIndex + ", nodeHostName=" + nodeHostName + ", nodePort=" + nodePort
+					+ ", confidence=" + confidence + "]";
+		}
+		
 	}
 
 
@@ -695,6 +866,7 @@ public class Guaranteer {
 			e.printStackTrace();
 		}
 	}
+
 
 
 

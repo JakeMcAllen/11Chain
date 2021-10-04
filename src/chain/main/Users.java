@@ -8,6 +8,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -25,6 +26,10 @@ public class Users {
 	
 	
 	private String index;
+	
+	private String name;
+	
+	
 	
 	// Keys
 	private PrivateKey privateKey = null;
@@ -213,34 +218,36 @@ public class Users {
 		return returnStr;
 	}
 	
-	private void getTransaction( String transactionHash, String guarantorHostname, int guarantorPort  )
+	public String getTransactionByIndex( String transactionHash, String guarantorHostname, int guarantorPort  )
 	{
+		
+		String transactionData = "";
 		
 		JSONObject jsonObject = new JSONObject();
 		
 		jsonObject.put("ActionToPerform", "readTransaction");
-		jsonObject.put("BlockHash", transactionHash);
+		jsonObject.put("BlockIndex", transactionHash);
 		
-		
-		try {
-			
-			Socket s = new Socket(guarantorHostname, guarantorPort);
 
-			OutputStream outputStream = s.getOutputStream();
-			ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-			ObjectInputStream inStream = new ObjectInputStream(s.getInputStream());
-			
-			objectOutputStream.writeObject( jsonObject );
-			
-			
-			s.close();
-			objectOutputStream.close();
-			inStream.close();
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		
+	    try (
+	    		Socket s = new Socket(guarantorHostname, guarantorPort);
+	    		
+	            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+	    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+	    ) {
+
+	    	out.println( jsonObject.toString() );
+	    	transactionData = in.readLine();
+	    	
+	    } catch (IOException e) {
+			e.printStackTrace();
+			transactionData = "Error";
+		}
+	    
+		
+		
+		return transactionData;
 	}
 	
 	/*
@@ -316,7 +323,7 @@ public class Users {
 				case "getTransaction": {
 
 				    String transactionHash = s.next();
-				    u.getTransaction(transactionHash, "localhost", 8081);
+				    u.getTransactionByIndex(transactionHash, "localhost", 8081);
 					break;
 				}
 				
