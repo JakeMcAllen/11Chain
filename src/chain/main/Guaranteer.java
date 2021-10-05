@@ -179,7 +179,7 @@ public class Guaranteer {
 		if ( ( pool.size() > blockMaxSize || t == null ) && pool.size() != 0 ) 
 		{
 			currentTransactionNumeber = 0;
-			creteNode.newNode(pool, currentBlockIndex);
+			creteNode.newBlock(pool, currentBlockIndex);
 
 			currentBlockIndex = ( Integer.parseInt( currentBlockIndex.substring(0, 1) ) + 1 ) + currentBlockIndex.substring(1); 
 			pool.clear();
@@ -193,8 +193,6 @@ public class Guaranteer {
 
 			// return an index to caller
 			transactionIndex = ++currentTransactionNumeber + "x" + currentBlockIndex;
-
-			System.err.println("\t\t---\t- " + currentTransactionNumeber + "x" + currentBlockIndex);
 
 		}
 
@@ -213,19 +211,17 @@ public class Guaranteer {
 			System.out.println("\t-Listener 'createNode'\t\t: Is Start");
 		}
 
-		public void newNode( List<Transaction> pool, String currentBlockIndex ) 
+		public void newBlock( List<Transaction> pool, String currentBlockIndex ) 
 		{
 			if ( pool.size() > 0 ) {
 
 				// TODO: Creation of a new block
 				Block b = new Block();
 				b.setIndex(currentBlockIndex);
-
-
-				for ( Transaction t : pool ) {					
-					b.setData( t.getByte() );
-				}
-
+				
+				b.importDataFromPool( pool );
+				
+				
 
 				// TODO:
 				// generate Hash and all other variables ! 
@@ -240,15 +236,10 @@ public class Guaranteer {
 
 
 
-
 				// Send new block to all Node
 				nodeList.stream().forEach( e -> {
 
-
 					try {
-
-						System.out.println("e.getNodeHostName(), e.getNodePort(): " + e.getNodeHostName() + "  " +  e.getNodePort());
-						System.out.println("guaranteer.socketPort: " + guaranteer.socketPort);
 						
 					    try (
 								Socket s = new Socket(e.getNodeHostName(), e.getNodePort());
@@ -272,22 +263,6 @@ public class Guaranteer {
 					}
 
 				});
-
-
-				Block nextB = null;					
-				do {
-					nextB = (nextB == null) ? Head : nextB.getNextBlock();
-					JSONObject jObj = nextB.toJSON();
-
-					try 
-						{ System.out.println( jObj.get("index") + " - " + new JSONArray( jObj.get("data") ) ); } 
-					catch (Exception e) 
-						{ System.out.println("BlockZero"); }
-
-				} while (nextB.hasNextBlock()) ;
-
-
-
 
 			}
 
@@ -439,7 +414,6 @@ public class Guaranteer {
 							}
 							
 						}
-						
 						
 						if ( !isPresent || nodeList.isEmpty() ) {
 							NodeInfo ni = new NodeInfo();

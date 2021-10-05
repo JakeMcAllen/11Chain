@@ -75,24 +75,24 @@ public class JTest {
 			
 			try { Thread.sleep(100); } catch (InterruptedException e) { e.printStackTrace(); }
 
-			System.err.println("\nBlockIndex: " +  transactionIndex.get("BlockIndex") );
+			System.err.println("BlockIndex: " +  transactionIndex.get("BlockIndex") );
 			
 		}
 
-//		try 
-//		{ 
-//			String getDatas = u.getTransactionByIndex("1x1a" ,hostNode, portNode);
-//			
-//			System.out.println(\n\n"OutputDatas: " + getDatas );
-//		} 
-//		catch (Exception e) { e.printStackTrace(); }
+		try 
+		{ 
+			String getDatas = u.getTransactionByIndex("0x1a" ,hostNode, portNode);
+			
+			System.err.println("\n\nOutputDatas: " + getDatas );
+		} 
+		catch (Exception e) { e.printStackTrace(); }
 		
 
 
 		// CLOSING
 		guaranteer.setListenerIsActive( false );
 		node.setListenerIsActive( false );
-		System.err.println("All entities are closed");
+		System.err.println("\n\nAll entities are closed");
 
 	}
 

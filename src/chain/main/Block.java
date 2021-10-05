@@ -15,8 +15,10 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import chain.component.Transaction;
 
 
 /*
@@ -39,6 +41,7 @@ public class Block {
 	private String hash;
 	
 	private byte[] data = null;
+	
 	
 	
 	
@@ -122,6 +125,10 @@ public class Block {
 
 	
 	
+
+	
+	
+	
 	public String getHash() 
 	{			
 		return hash;
@@ -141,7 +148,9 @@ public class Block {
 		try {
 			if (this.data != null) { 
 				arrayOutputStream.write( this.data );
+				arrayOutputStream.write( ",{".getBytes() );
 				arrayOutputStream.write( data );
+				arrayOutputStream.write( "}".getBytes() );
 			
 				this.data = arrayOutputStream.toByteArray();
 			} else {
@@ -291,27 +300,106 @@ public class Block {
 	public static Block generateBlockFromJSON( JSONObject jObj ) 
 	{	
 		
-		
 		Block b = new Block();
 		
-		
-		if ( jObj.has("data") ) b.setData( (byte[]) jObj.get( "data" ).toString().getBytes() );
-		if ( jObj.has("gas") ) b.setGas( jObj.getInt("gas") );
-		if ( jObj.has("hash") ) b.setHash( jObj.getString("hash") );
-		
-		if ( jObj.has("hasNext") ) b.setHasNext( jObj.getBoolean("hasNext") );
-		if ( jObj.has("index") ) b.setIndex( jObj.getString("index") );
-		if ( jObj.has("numberOfSiblingBlock") ) b.setNumberOfSiblingBlock( jObj.getInt("numberOfSiblingBlock") );
-		if ( jObj.has("parentHash") ) b.setParentHash( jObj.getString("parentHash") );
-		if ( jObj.has("size") ) b.setSize( jObj.getInt("size") );
-		if ( jObj.has("status") ) b.setStatus( jObj.getBoolean("status") );
-		if ( jObj.has("timeData") ) b.setTimeData( LocalDateTime.parse( jObj.getString("timeData") ) );
-		
-		
-		System.out.println("generateBlockFromJSON: " + b);
-		
+		try {
+			if ( jObj.has("data") ) 				b.setData( Block.converterJSONArrayToString( jObj.getJSONArray( "data" ) ).getBytes() );
+			if ( jObj.has("gas") ) 					b.setGas( jObj.getInt("gas") );
+			if ( jObj.has("hash") ) 				b.setHash( jObj.getString("hash") );
+			if ( jObj.has("hasNext") ) 				b.setHasNext( jObj.getBoolean("hasNext") );
+			if ( jObj.has("index") ) 				b.setIndex( jObj.getString("index") );
+			if ( jObj.has("numberOfSiblingBlock") ) b.setNumberOfSiblingBlock( jObj.getInt("numberOfSiblingBlock") );
+			if ( jObj.has("parentHash") ) 			b.setParentHash( jObj.getString("parentHash") );
+			if ( jObj.has("size") ) 				b.setSize( jObj.getInt("size") );
+			if ( jObj.has("status") ) 				b.setStatus( jObj.getBoolean("status") );
+			if ( jObj.has("timeData") ) 			b.setTimeData( LocalDateTime.parse( jObj.getString("timeData") ) );
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+						
 		return b;
 	}
+	
+	
+	
+	
+	
+	/*
+	 * 
+	 * 	UTIL METHODS !
+	 * 
+	 * 
+	 */
+	public void importDataFromPool(List<Transaction> pool) {
+		
+		ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+		
+		
+		try {
+			
+			arrayOutputStream.write( "[".getBytes() );
+			
+			
+			for ( int i=0 ; i < pool.size() ; i++ ) 
+			{
+				Transaction t = pool.get(i);
+				
+				try {
+										
+					if (i > 0) arrayOutputStream.write( ",".getBytes() );
+					arrayOutputStream.write( t.getByte() );
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+			}
+			
+			
+			arrayOutputStream.write( "]".getBytes() );
+			this.data = arrayOutputStream.toByteArray();
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}	
+	}
+	
+	public static byte[] converterJSONArrayToByteArray (JSONArray array) {
+		
+		byte[] bs = new byte[ array.length() ];
+		for (int i=0; i < array.length(); i++) 
+		{
+			bs[i] = (byte) (((int) array.get(i) & 0xFF ));
+		}
+		
+		return bs;
+	}
+	
+	
+	public static String converterJSONArrayToString (JSONArray array) {
+		byte[] bts = converterJSONArrayToByteArray(array);
+				
+		return new String(bts);
+	}
+	
+	public static String taketransactionFromData(JSONObject jObj, int position) {
+		
+		String str = "";
+				
+		try {
+			JSONArray jo = new JSONArray( new String( (byte[]) jObj.get( "data" ) ) );
+			
+			return jo.getJSONObject(position).toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		
+		
+		return str;
+	}
+	
 	
 	
 	
@@ -423,6 +511,8 @@ public class Block {
 	{
 		return index.length() == 2 ? true : false;
 	}
+
+
 	
 	
 }

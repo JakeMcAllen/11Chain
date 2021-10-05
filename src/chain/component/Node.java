@@ -3,12 +3,9 @@ package chain.component;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
@@ -21,7 +18,6 @@ import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import chain.main.Block;
 
@@ -42,6 +38,7 @@ import chain.main.Block;
  * 			6) Controller for waiting transaction. Can delete old transaction;
  * 			7) String stamp of Node action. Runtime.
  * 			8) Control of errors. Like when guaranteer is close.
+ * 			9) Data encription and decription
  * 
  * 
  * 		MODULE LIST: 
@@ -84,12 +81,12 @@ public class Node {
 	// first and last block of chain
 	private Block Head;
 	private Block Tail;
-	
+
 
 	// Keys
 	private PrivateKey privateKey = null;
 	private PublicKey publicKey = null;
-	
+
 
 	// socket port of node and hostName and Port of Guaranteer
 	private String socketHostName;
@@ -97,15 +94,15 @@ public class Node {
 
 	private String guarantorHostName;
 	private int guarantorPort;
-	
-	
-	
+
+
+
 	// boolean variables
 	private boolean listenerIsActive = true;
 
 	// index of node
 	private int index;
-	
+
 
 
 
@@ -166,19 +163,19 @@ public class Node {
 		// Set guaranteer host and ports and socket hostName and port
 		this.guarantorHostName = guarenteerHostName;
 		this.guarantorPort = guaranteerPort;
-		
+
 		this.socketHostName = socketHostName;
 		this.socketPort = localPort;
-		
+
 		this.index = nodeIndex;
-		
-		
+
+
 		// Start listener module
 		(new Node.getDataThread( this.socketPort, this )).start();
-		
+
 		// Load chain from guaranteer
 		loadChain();
-			
+
 	}
 
 
@@ -209,54 +206,56 @@ public class Node {
 	 * 		The part of string before letter "x" is the block hash.
 	 * 
 	 */
-	
+
 	// Call all block of chain from guaranteer
 	private void loadChain() {
-		
+
 		try {
-			
+
 			// Call for all chain
 			JSONObject JObj = new JSONObject();
 			JObj.put("ActionToPerform", "LoadChain");
 
 			Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
 
-			
-		    // READ --- errore
-		    try (
-					// Socket  
-		    		
-		    		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-		    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-		    ) {
 
-		    	out.println( JObj.toString() );
-		    	
-		    	Head = AddNextBlock( in );
-		    	
-		    }
-		    
-		    s.close();
-		    
+			// READ --- errore
+			try (
+					// Socket  
+
+					PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+					BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+					) {
+
+				out.println( JObj.toString() );
+
+				Head = Tail = AddNextBlock( in );
+
+			}
+
+			s.close();
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	// Metodo ricorsivo per caricare la chain
 	// TODO: Da rivedere che funzioni bene ! ! ! 
 	private Block AddNextBlock( BufferedReader in ) {
-		
-		
+
+
 		try {
 			String str = in.readLine();
-						
+
 			Block nBlock = Block.generateBlockFromJSON( new JSONObject( str ) );
-			
+
 
 			for ( int i=0; i < nBlock.SiblingBlockNumber(); i++ ) 
-			{	
+			{
+				
+				
 				Block b = AddNextBlock( in );
 				nBlock.addSiblingBlock( b );
 			}
@@ -269,22 +268,22 @@ public class Node {
 
 			// TODO: TO CHECK 
 			// MileStone.put(nBlock.getHash(), nBlock);
-			
+
 			return nBlock;
-			
+
 		} catch (IOException e) {
 			return null;
 		}
-				
+
 	}
-	
-	
+
+
 	// Listen connection to node and start "ResponseThread" thread for serve actions
 	private class getDataThread extends Thread {
-		
+
 		private int localListeningPort;
 		private Node node;
-		
+
 		public getDataThread( int localListeningPort, Node node) 
 		{
 			this.localListeningPort = localListeningPort;
@@ -295,104 +294,94 @@ public class Node {
 		public void run() {
 
 			Object sincronizer = new Object();
-			
-			
+
+
 			while ( listenerIsActive ) {
-				
+
 				try (
-					ServerSocket serverSocket = new ServerSocket( localListeningPort );
-				) {
-				
+						ServerSocket serverSocket = new ServerSocket( localListeningPort );
+						) {
+
 					// Execute an controller for connection
 					(new Node.ResponseThread(serverSocket.accept(), sincronizer, this.node)).start();
-					
-					
+
+
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				
+
 			}
 		}
 	}
-	
+
 	private class ResponseThread extends Thread {
-		
+
 		private Socket socket = null;
 		private Object sincronizer = null;
 		private Node node;
-			
+
 		public ResponseThread(Socket socket, Object sincronizer, Node node) 
 		{
 			this.socket = socket;
 			this.sincronizer = sincronizer;
 			this.node = node;
 		}
-		
-		
+
+
 		@Override
 		public void run() 
 		{
-			
+
 			try (
 					// In out stream
-		            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-		    		BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-			) {
-				
+					PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+					BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
+					) {
+
 				// Response string
 				String returnString = "";
 				String input = in.readLine();
 
 
 				JSONObject jObj = new JSONObject( input );
-				System.out.println("Action to perform N: " + jObj.getString("ActionToPerform") );
-				
-
-				
 
 
-				
-				
 				// TODO: Add other action to perform
 				switch ( jObj.getString("ActionToPerform") ) {
-				
+
 				case "postTransactionInPool":
-					
+
 					JSONObject nodeInfo = new JSONObject();
 					nodeInfo.put("HostName", this.node.socketHostName);
 					nodeInfo.put("Port", this.node.socketPort);
 					nodeInfo.put("nodeIndex", this.node.index);
-					
-					
+
+
 					jObj.put("NodeInfo", nodeInfo);
-					
-					
+
+
 					returnString = postTransaction( jObj.toString() );
 					break;
-				
+
 				case "readTransaction":
-					
-					String transactionNumber = jObj.getString("BlockHash").split("x")[0];
-					returnString = getTransactionFromObject( readBlock( jObj ), transactionNumber );
-					
-					
+
+					returnString = getTransactionFromObject( jObj );
+
+
 					break;
-					
+
 				case "readBlock":
-					
+
 					returnString = readBlock( jObj );
 					break;
-				
+
 				case "setNewBlock":
 					
-					synchronized (sincronizer) 
-					{
-						setNewBlock( jObj );
-					}
+					setNewBlock( jObj );
 					break;
-				
+
 				case "setNewSCBlock":
-					
+
 					synchronized (sincronizer) 
 					{
 						setNewSCBlock( jObj );
@@ -400,129 +389,151 @@ public class Node {
 					break;
 
 				case "":
-					
+
 					synchronized (sincronizer) 
 					{
 						returnString = "";
 					}
 					break;
-					
+
 				default:
 					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 				}
-				
-					
+
+
 				// return response 
 				out.println(returnString);
-			
-			
+
+
 			} catch (Exception e) {
 				System.err.println("Error in 'ResponseThread Node': " + e.getMessage() );		
 			}
 		}
-		
-	}
-	
-	
-	
 
-	
-	
-	
-	
+	}
+
+
+
+
+
+
+
+
 	/**
 	 **
 	 ** 	START CHAIN ACTIONS
 	 ** 
 	 ** 
 	 */
-	
+
 	private String postTransaction( String input ) {
-		
+
 		String returnString = "";
-		
+
 		// Get response from variables
 		returnString = addTTPool(input);
 		return returnString;
 	}
-	
+
 	private String readBlock( JSONObject jObj ) {
-		
+
 		// TODO: case smartContract block ! ! !
-		
+
 		String returnString = "";
 		System.err.println("Error in Node: readBlock");
 		String blockName = jObj.getString("BlockHash").split("x")[1];
-				
+
 		MileStone.get(blockName);
-		
+
 		return returnString;
 	}
-		
-	private String getTransactionFromObject( String returnString, String transactionNumber ) {
-		
-		if ( !returnString.equals("") ) {
-			
-			JSONObject rObj = new JSONObject(returnString); 
-			System.err.println("Error in Node: readBlock");
 
-			JSONObject tr = (JSONObject) rObj.get("Transactions");
-			
-			return tr.get( transactionNumber ).toString();
-			
-		} 
+	private String getTransactionFromObject( JSONObject jsonObject ) {
+
+		int transactionNumber = Integer.parseInt( jsonObject.getString("BlockIndex").split("x")[0] );
+		String blockIndex = jsonObject.getString("BlockIndex").split("x")[1];
 		
-		return "";
+		Block nb = null;
+		do {
+			nb = (nb == null) ? Head : nb.getNextBlock();			
+		} while ( nb.hasNextBlock() );
+		
+		
+		
+		
+		
+		Block nextB = null;
+		do {
+			
+			nextB = (nextB == null) ? Head : nextB.getNextBlock();
+			JSONObject jObj = nextB.toJSON();
+			
+			// cerca blocco
+			if ( jObj.getString("index").equals(blockIndex) )
+			{
+
+				String datas = Block.taketransactionFromData(jObj, transactionNumber);				
+				return datas;
+			}
+
+		} while ( true );
+		
 	}
-	
+
 	private void setNewBlock( JSONObject jObj ) 
 	{
-		
-		System.out.println("jObj: " + jObj.getJSONObject("NewBlock") );
-		
-		
 		Block nBlock = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
 		
-		// Non si vede mai ... si germa prima ! ! ! 
-		System.err.println("nBlock: " + nBlock);
-		
-		if (this.Tail != null )
-		{
-			Tail.setNextBlock( nBlock );
-			Tail = nBlock;
-		} else {
-			Head = Tail = nBlock;
+		try {
+			if ( Head == null)
+			{
+				Head = Tail = nBlock;
+			} 
+				else 
+			{	
+				
+				Tail.setNextBlock( nBlock );
+				Tail.setHasNext( true );
+				Tail = nBlock;
+				
+				System.out.println("\nnBlock: " + nBlock.toJSON() + "\n" );
+	
+			}
+
+		} catch (Exception e) {
+			System.err.println("Error in Node");
+			e.printStackTrace();
 		}
-		
+			
 	}
 
 	private void setNewSCBlock( JSONObject jObj ) { 
-		
+
 		Block nBlock = Block.generateBlockFromJSON( (JSONObject) jObj.get("block") );
 
 		Block parentBlock = MileStone.get( nBlock.getParentBlockHash() );
-		
+
 		parentBlock.setNextBlock( parentBlock );
-		
+
 	}
-	
+
 	/**
 	 **
 	 ** 	END CHAIN ACTIONS
 	 ** 
 	 ** 
 	 */
-	
-	
-	
-	
-	
-	
-	
 
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
 
 
 	/*
@@ -533,8 +544,8 @@ public class Node {
 	// TODO: Smart contract Execution
 
 	// TODO: Smart contract control
-	
-	
+
+
 
 
 
@@ -567,35 +578,35 @@ public class Node {
 
 		try {
 			Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
-			
+
 			try (
 					PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-		    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-			) {
-			    
-			    // READ
-		    	out.println( input );
-		    	
-		    	transactionIndex = in.readLine();
-	
-		    	
+					BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+					) {
+
+				// READ
+				out.println( input );
+
+				transactionIndex = in.readLine();
+
+
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+
 			s.close();
-		
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}		
-		
+
 		return transactionIndex;
 	}
 
-	
 
-	
-	
+
+
+
 
 
 	/*
@@ -608,11 +619,11 @@ public class Node {
 	// TODO: Creazione di un blocco e validazione
 
 	// TODO: ReadChain
-	
+
 	public void setListenerIsActive( boolean active ) {
 		this.listenerIsActive = active;
 	}
-	
+
 	public int getIndex() {
 		return index;
 	}
@@ -620,24 +631,24 @@ public class Node {
 	public void setIndex(int index) {
 		this.index = index;
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/*
 	 * 
 	 * 		USER / APPLICATION CONNECTION
@@ -659,10 +670,10 @@ public class Node {
 
 
 
-	
-	
-	
-	
+
+
+
+
 	/*
 	 * 
 	 *  	ENCRIPTION
@@ -682,7 +693,7 @@ public class Node {
 		keyPairGenerator.initialize( 2048, secureRandom);
 		return keyPairGenerator.generateKeyPair();
 	}
-	
+
 	public byte[] dataEncryption ( String plainText ) throws Exception 
 	{
 		Cipher cipher = Cipher.getInstance("RSA");
@@ -706,17 +717,17 @@ public class Node {
 
 		return new String(result);
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
 	/*
 	 * 
 	 * 		MAIN
@@ -729,59 +740,59 @@ public class Node {
 	 */
 	public static void main(String[] args) {
 
-		
+
 		boolean isRunning = true;
-		
+
 		System.out.println("Run:");
-		
-		
+
+
 		int portLocal = 8081;
-		
+
 		String hostGuaranteer = "localhost";
 		int portGuaranteer = 8082;
-		
-		
+
+
 		Node node = null;
 		try {
-			
+
 			System.out.println("Start new Node: ");
 			node = new Node(hostGuaranteer, portLocal, hostGuaranteer, portGuaranteer, 0 );
 			System.out.println("Node is start with success.");			
-			
-			
+
+
 			Scanner s = new Scanner(System.in);
-			
-			
+
+
 			while ( isRunning ) {
-				
-			    String userInput = s.next();
-			    
-			    
-			    // TODO: Add new actions to perform
-			    switch (userInput) {
+
+				String userInput = s.next();
+
+
+				// TODO: Add new actions to perform
+				switch (userInput) {
 				case "stop": {
-					
+
 					isRunning = false;
 					node.setListenerIsActive( false );
 					break;
 				}
 				case "tctg": {
-					
+
 					// Test connection to guaranteer
 					break;
 				}
-				
-				
+
+
 				default:
 					throw new IllegalArgumentException("Unexpected value: " + userInput);
 				}		
-				
-			    
+
+
 			}
-			
-			
-		    s.close();
-			
+
+
+			s.close();
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -3,6 +3,7 @@ package chain.component;
 import java.io.File;
 
 import javax.xml.bind.DatatypeConverter;
+import javax.xml.crypto.Data;
 
 import org.json.JSONObject;
 
@@ -118,7 +119,7 @@ public class Transaction {
 	
 	public byte[] getByte() 
 	{
-		return data.toString().getBytes();
+		return this.data.toString().getBytes() ;
 	}
 
 	public String getSByte() 
