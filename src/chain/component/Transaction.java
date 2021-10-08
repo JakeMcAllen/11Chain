@@ -14,7 +14,8 @@ public class Transaction {
 	
 		
 	private JSONObject data;
-		
+	private JSONObject userD;
+	
 	private Users user;
 	private String userID;
 	

@@ -1,4 +1,4 @@
-package chain.component;
+package chain.main;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,7 +19,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
 
-import chain.main.Block;
+import chain.component.Block;
 
 
 

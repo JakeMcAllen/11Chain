@@ -3,27 +3,22 @@ package chain.main;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
-import org.w3c.dom.NodeList;
 
+import chain.component.Block;
 import chain.component.Transaction;
+import chain.component.info.NodeInfo;
+import chain.component.info.UsersInfo;
 
 /*
  * 
@@ -48,8 +43,8 @@ public class Guaranteer {
 
 
 	// lista delle info del nodo
-	private List<Guaranteer.NodeInfo> nodeList;
-	private List<Guaranteer.UsersData> userDataList;
+	private List<NodeInfo> nodeList;
+	private List<UsersInfo> userDataList;
 
 
 	private List<Transaction> pool;
@@ -107,8 +102,8 @@ public class Guaranteer {
 		creteNode = new Guaranteer.createNode( this );
 
 
-		nodeList = new ArrayList<Guaranteer.NodeInfo> ();
-		userDataList = new ArrayList<Guaranteer.UsersData> ();
+		nodeList = new ArrayList<NodeInfo> ();
+		userDataList = new ArrayList<UsersInfo> ();
 
 
 
@@ -569,279 +564,6 @@ public class Guaranteer {
 	public void setListenerIsActive(boolean state) {
 		this.listenerIsActive = state;
 	}
-
-
-
-
-
-
-
-
-
-
-	private class UsersData {
-
-		private String index;
-
-		private String name;
-
-
-
-		// Keys
-		private PrivateKey privateKey = null;
-		private PublicKey publicKey = null;
-
-
-		// Balance
-		private long balance;
-
-		// Permissions   from 0 to 5   ( from Low to Hight )
-		private int permissions;
-
-		// data
-		private byte[] data;
-
-
-		public UsersData() {
-		}
-
-		public UsersData(String index, String name, PrivateKey privateKey, PublicKey publicKey, long balance,
-				int permissions, byte[] data) {
-			super();
-			this.index = index;
-			this.name = name;
-			this.privateKey = privateKey;
-			this.publicKey = publicKey;
-			this.balance = balance;
-			this.permissions = permissions;
-			this.data = data;
-		}
-
-
-
-
-
-
-		public String getIndex() {
-			return index;
-		}
-
-		public void setIndex(String index) {
-			this.index = index;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public void setName(String name) {
-			this.name = name;
-		}
-
-		public PrivateKey getPrivateKey() {
-			return privateKey;
-		}
-
-		public void setPrivateKey(PrivateKey privateKey) {
-			this.privateKey = privateKey;
-		}
-
-		public PublicKey getPublicKey() {
-			return publicKey;
-		}
-
-		public void setPublicKey(PublicKey publicKey) {
-			this.publicKey = publicKey;
-		}
-
-		public long getBalance() {
-			return balance;
-		}
-
-		public void setBalance(long balance) {
-			this.balance = balance;
-		}
-
-		public int getPermissions() {
-			return permissions;
-		}
-
-		public void setPermissions(int permissions) {
-			this.permissions = permissions;
-		}
-
-		public byte[] getData() {
-			return data;
-		}
-
-		public void setData(byte[] data) {
-			this.data = data;
-		}
-
-
-
-	}
-
-
-	/**
-	 * 
-	 * 	Object that contain all info about a node of chain
-	 * 
-	 * 
-	 * @author giorg
-	 *
-	 */
-	private class NodeInfo {
-
-		private int nodeIndex;
-		private String nodeHostName;
-		private int nodePort;
-
-		private long confidence;
-
-		// TODO: add other info about a single node
-
-
-
-		public NodeInfo() {
-		}
-
-		public NodeInfo(int nodeIndex, String nodeHostName, int nodePort) {
-			super();
-			this.nodeIndex = nodeIndex;
-			this.nodeHostName = nodeHostName;
-			this.nodePort = nodePort;
-		}
-
-
-
-
-
-
-
-
-
-		public int getNodeIndex() {
-			return nodeIndex;
-		}
-
-		public void setNodeIndex(int nodeIndex) {
-			this.nodeIndex = nodeIndex;
-		}
-
-		public String getNodeHostName() {
-			return nodeHostName;
-		}
-
-
-		public void setNodeHostName(String nodeHostName) {
-			this.nodeHostName = nodeHostName;
-		}
-
-
-		public int getNodePort() {
-			return nodePort;
-		}
-
-
-		public void setNodePort(int nodePort) {
-			this.nodePort = nodePort;
-		}
-
-
-		public long getConfidence() {
-			return confidence;
-		}
-
-
-		public void setConfidence(long confidence) {
-			this.confidence = confidence;
-		}
-
-		
-		
-		
-		@Override
-		public String toString() {
-			return "NodeInfo [nodeIndex=" + nodeIndex + ", nodeHostName=" + nodeHostName + ", nodePort=" + nodePort
-					+ ", confidence=" + confidence + "]";
-		}
-		
-	}
-
-
-
-
-
-	/*
-	 * 
-	 * 		MAIN
-	 * 
-	 * 	
-	 * 	Comands: 
-	 * 		1) STOP:	Ferma l'esecuzione del nodo;
-	 * 		2) 	
-	 * 
-	 */
-	public static void main(String[] args) {
-
-		boolean isRunning = true;
-
-
-		int portLocal = 8082;
-
-
-
-		try {
-
-			System.out.println("Start Guaranteer: ");
-			Guaranteer guaranteer = new Guaranteer( portLocal );
-			System.out.println("\nGuaranteer is start with success on port: " + portLocal);
-
-			Scanner s = new Scanner(System.in);
-
-
-
-			while ( isRunning ) {
-
-				System.out.print("Enter a comand: ");
-				String userInput = s.next();
-
-
-				// TODO: Add new actions to perform
-				switch (userInput) {
-				case "stop": {
-
-					isRunning = false;
-					guaranteer.setListenerIsActive( false );
-
-
-					System.out.println("Application stopped successfully");
-					break;
-				}
-				case "tctg": {
-
-					// Test connection to guaranteer
-					break;
-				}
-
-
-				default:
-					throw new IllegalArgumentException("Unexpected value: " + userInput);
-				}		
-
-
-			}
-
-
-			s.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-
 
 
 }

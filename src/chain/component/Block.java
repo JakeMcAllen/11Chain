@@ -1,4 +1,4 @@
-package chain.main;
+package chain.component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,8 +17,6 @@ import javax.crypto.NoSuchPaddingException;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import chain.component.Transaction;
 
 
 /*

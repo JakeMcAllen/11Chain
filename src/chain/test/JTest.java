@@ -5,9 +5,9 @@ import static org.junit.Assert.assertEquals;
 import org.json.JSONObject;
 import org.junit.Test;
 
-import chain.component.Node;
 import chain.component.Transaction;
 import chain.main.Guaranteer;
+import chain.main.Node;
 import chain.main.Users;
 
 public class JTest {
