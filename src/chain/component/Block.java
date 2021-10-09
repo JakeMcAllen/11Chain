@@ -311,12 +311,10 @@ public class Block {
 			if ( jObj.has("size") ) 				b.setSize( jObj.getInt("size") );
 			if ( jObj.has("status") ) 				b.setStatus( jObj.getBoolean("status") );
 			if ( jObj.has("timeData") ) 			b.setTimeData( LocalDateTime.parse( jObj.getString("timeData") ) );
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			
+		} catch (Exception e) { e.printStackTrace(); }
 	
 		System.out.println("\nNew Block \n");
-		
 		return b;
 	}
 	

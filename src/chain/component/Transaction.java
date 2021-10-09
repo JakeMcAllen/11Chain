@@ -135,7 +135,8 @@ public class Transaction {
 		jObj.put("transactionData", this.transactionData);
  		jObj.put("user", this.userD);
  		jObj.put("node", this.node);
-
+ 		jObj.put("transactionDataLength", this.transactionData.toString().length() );
+ 		 		
 		return jObj;
 		
 	}
