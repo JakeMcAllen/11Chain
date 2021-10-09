@@ -7,7 +7,11 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
@@ -98,9 +102,9 @@ public class Guaranteer {
 	{
 		// Initialization of lists
 		this.pool = new ArrayList<Transaction> ();
+		this.socketPort = socketPort;
 
 		creteNode = new Guaranteer.createNode( this );
-
 
 		nodeList = new ArrayList<NodeInfo> ();
 		userDataList = new ArrayList<UsersInfo> ();
@@ -115,8 +119,10 @@ public class Guaranteer {
 		timer.schedule(task, 0, timeToSendBlock * 100);
 
 
+		// thread that listen node connection to localhost
 		(new Guaranteer.getDataThread(this, socketPort)).start();
 
+		
 
 		// TODO: BlockZero sent hash and default data
 		Block blockZero = new Block();
@@ -127,12 +133,24 @@ public class Guaranteer {
 
 
 
-		this.socketPort = socketPort;
+		
+		// Load first MileStone
+		MileStone.put(blockZero.getIndex(), blockZero);
 
-
-		// load MileStone
-
-
+		
+		// thread that update the Milestone every midnigth
+		Calendar calendar = Calendar.getInstance();
+		int period = 100000; //10secs
+		
+		
+		calendar.add(Calendar.DAY_OF_YEAR, 1);
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);		
+	    
+	    ( new Timer() ).schedule( new updateMilestone( this ) , calendar.getTime(), period );
+	    
 	}
 
 
@@ -140,6 +158,7 @@ public class Guaranteer {
 
 
 
+	
 
 
 
@@ -175,7 +194,7 @@ public class Guaranteer {
 		{
 			currentTransactionNumeber = 0;
 			creteNode.newBlock(pool, currentBlockIndex);
-
+			
 			currentBlockIndex = ( Integer.parseInt( currentBlockIndex.substring(0, 1) ) + 1 ) + currentBlockIndex.substring(1); 
 			pool.clear();
 		}
@@ -228,7 +247,7 @@ public class Guaranteer {
 				// b.generateHash( userDataList.get( ( (Transaction) pool.get( pool.size() -1 ) ).getUserID() ) );
 
 				guaranteer.addBlock(b);
-
+				this.guaranteer.lastInsertBlock = b;
 
 
 				// Send new block to all Node
@@ -483,13 +502,19 @@ public class Guaranteer {
 
 	}
 
+	
 
+	
+
+
+	
 
 	/* 
 	 * 
 	 * 	START ACTION ON THE CHAIN
 	 * 
 	 */
+	
 	public String loadChain(PrintWriter out, Block currentBlock) {
 
 
@@ -509,6 +534,22 @@ public class Guaranteer {
 		return "OK";
 	}
 
+	private class updateMilestone extends TimerTask {
+		private Guaranteer guaranteer;
+		
+		public updateMilestone(Guaranteer guaranteer) {
+			this.guaranteer = guaranteer;
+		}
+
+		
+		@Override
+		public void run() {
+			this.guaranteer.setNewMileStone( 
+						this.guaranteer.getLastBlockInserted()
+					);
+		}
+		
+	}
 
 	/* 
 	 * 
@@ -565,5 +606,18 @@ public class Guaranteer {
 		this.listenerIsActive = state;
 	}
 
+	public HashMap<String, Block> getMileStone() {
+		return MileStone;
+	}
 
+	public void setNewMileStone(Block b) {
+		this.MileStone.put(b.getIndex(), b);
+	}
+
+	private Block getLastBlockInserted() {
+		return this.lastInsertBlock;
+	}
+	
+	
+	
 }
