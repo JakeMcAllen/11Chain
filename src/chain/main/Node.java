@@ -262,9 +262,6 @@ public class Node {
 				nBlock.setNextBlock( AddNextBlock( in) ); 
 			}
 
-			// TODO: TO CHECK 
-			// MileStone.put(nBlock.getHash(), nBlock);
-
 			return nBlock;
 
 		} catch (IOException e) {
@@ -332,15 +329,15 @@ public class Node {
 					// In out stream
 					PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 					BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-					) {
+				) {
 
 				// Response string
 				String returnString = "";
 				String input = in.readLine();
 
-
 				JSONObject jObj = new JSONObject( input );
 
+				
 
 				// TODO: Add other action to perform
 				switch ( jObj.getString("ActionToPerform") ) {
@@ -363,31 +360,16 @@ public class Node {
 
 					returnString = getTransactionFromObject( jObj );
 					break;
-
-				case "readBlock":
-
-					returnString = readBlock( jObj );
-					break;
-
+					
 				case "setNewBlock":
 					
 					setNewBlock( jObj );
 					break;
 
-				case "setNewSCBlock":
-
-					synchronized (sincronizer) 
-					{
-						setNewSCBlock( jObj );
-					}
-					break;
-
-				case "":
-
-					synchronized (sincronizer) 
-					{
-						returnString = "";
-					}
+				case "setNewBlockToMilestone":
+					
+					Block b = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
+					this.node.MileStone.put(b.getIndex(), b );
 					break;
 
 				default:

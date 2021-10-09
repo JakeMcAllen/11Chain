@@ -102,8 +102,10 @@ public class Guaranteer {
 	{
 		// Initialization of lists
 		this.pool = new ArrayList<Transaction> ();
+		this.MileStone = new HashMap<String, Block>();
 		this.socketPort = socketPort;
 
+		
 		creteNode = new Guaranteer.createNode( this );
 
 		nodeList = new ArrayList<NodeInfo> ();
@@ -126,7 +128,7 @@ public class Guaranteer {
 
 		// TODO: BlockZero sent hash and default data
 		Block blockZero = new Block();
-		blockZero.setIndex( "0a" );
+		blockZero.setIndex( "1x0a" );
 		this.currentBlockIndex = "1a";
 
 		this.Head = this.Tail = blockZero;
@@ -138,18 +140,15 @@ public class Guaranteer {
 		MileStone.put(blockZero.getIndex(), blockZero);
 
 		
-		// thread that update the Milestone every midnigth
+		// thread that update the Milestone every day at midnight
 		Calendar calendar = Calendar.getInstance();
-		int period = 100000; //10secs
-		
-		
 		calendar.add(Calendar.DAY_OF_YEAR, 1);
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		calendar.set(Calendar.MINUTE, 0);
 		calendar.set(Calendar.SECOND, 0);
 		calendar.set(Calendar.MILLISECOND, 0);		
 	    
-	    ( new Timer() ).schedule( new updateMilestone( this ) , calendar.getTime(), period );
+	    ( new Timer() ).schedule( new updateMilestone( this ) , calendar.getTime(), 86400000 );
 	    
 	}
 
@@ -236,10 +235,7 @@ public class Guaranteer {
 				b.importDataFromPool( pool );
 				
 				
-
-				// TODO:
-				// generate Hash and all other variables ! 
-				// generate "listSCDataConnected"  
+				// Generate "listSCDataConnected"  
 				b.setIndex(currentBlockIndex);
 
 
@@ -251,33 +247,8 @@ public class Guaranteer {
 
 
 				// Send new block to all Node
-				nodeList.stream().forEach( e -> {
-
-					try {
-						
-					    try (
-								Socket s = new Socket(e.getNodeHostName(), e.getNodePort());
-
-					            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-					    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-					    ) {
-					    	
-					    	JSONObject jObj = new JSONObject();
-					    	jObj.put("ActionToPerform", "setNewBlock");
-					    	jObj.put("NewBlock", b.toJSON() );
-
-					    	
-					    	out.println( jObj.toString() );
-
-					    }
-						
-						
-					} catch (Exception e1) {
-						e1.printStackTrace();
-					}
-
-				});
-
+				this.guaranteer.sendToAllNodoJSON("setNewBlock", b.toJSON());
+				
 			}
 
 			if (!guaranteer.listenerIsActive) System.exit(0);
@@ -285,7 +256,7 @@ public class Guaranteer {
 	}
 
 	// Timer
-	private class TimerHelper extends TimerTask 
+	private class TimerHelper extends TimerTask
 	{
 		private Guaranteer guaranteer;
 
@@ -544,9 +515,15 @@ public class Guaranteer {
 		
 		@Override
 		public void run() {
-			this.guaranteer.setNewMileStone( 
-						this.guaranteer.getLastBlockInserted()
-					);
+			Block b = this.guaranteer.getLastBlockInserted();
+			
+			// Set new milestone
+			this.guaranteer.setNewMileStone( b );
+			
+			
+			// Send new block at milestone of all Node
+			this.guaranteer.sendToAllNodoJSON( "setNewBlockToMilestone", b.toJSON() );
+			
 		}
 		
 	}
@@ -596,6 +573,35 @@ public class Guaranteer {
 
 
 		return "nodeAddSuccess";
+	}
+	
+	
+	private void sendToAllNodoJSON( String message, JSONObject obj ) {
+		nodeList.stream().forEach( e -> {
+
+			try {
+				
+			    try (
+						Socket s = new Socket(e.getNodeHostName(), e.getNodePort());
+
+			            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+			    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+			    ) {
+			    	
+			    	JSONObject jObj = new JSONObject();
+			    	jObj.put("ActionToPerform", message);
+			    	jObj.put("NewBlock", obj );
+			    	
+			    	out.println( jObj.toString() );
+
+			    }
+				
+				
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+
+		});
 	}
 
 	public boolean getListenerIsActive() {
