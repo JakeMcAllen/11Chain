@@ -1,9 +1,10 @@
 package chain.component;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import javax.xml.bind.DatatypeConverter;
-import javax.xml.crypto.Data;
 
 import org.json.JSONObject;
 
@@ -13,25 +14,42 @@ public class Transaction {
 	
 	
 		
-	private JSONObject data;
+	private JSONObject transactionData;
 	private JSONObject userD;
+	private JSONObject node;
 	
-	private Users user;
-	private String userID;
 	
 	
 
+	public Transaction() {
+		userD = new JSONObject();
+		node = new JSONObject();
+	}
+	
 	
 	public Transaction(String user, JSONObject data) {
-
-		this.data = data;
-		this.userID = user;
+		this();
+		
+		this.transactionData = data;
 	}
 	
 	public Transaction(Users user, JSONObject data) {
 		this(user.getIndex(), data);
 		
-		this.user = user;
+		
+		
+		this.userD.put("index", user.getIndex() );
+		this.userD.put("name", user.getName() );
+		this.userD.put("surname", user.getSurname() );
+		this.userD.put("balance", user.getBalance() );
+		this.userD.put("publicKey", user.getPublicKey() );
+		this.userD.put("data", user.getData() );
+		this.userD.put("permission", user.getPermissions() );
+		this.userD.put("CompanyName", user.getCompanyName() );
+		this.userD.put("CompanyIndex", user.getCompanyIndex() );
+		this.userD.put("CompanyNodeIndex", user.getCompanyNodeIndex() );
+		
+		
 	}
 	
 	public Transaction(Users user, String str) {
@@ -39,11 +57,24 @@ public class Transaction {
 	}
 	
 	public Transaction(JSONObject jObj) {
-		this( jObj.get("userId").toString() , jObj );
+		this(
+				jObj.getJSONObject("transactionData"),
+				jObj.getJSONObject("user"),
+				jObj.getJSONObject("node")
+			);
 	}	
 
-
+	public Transaction(JSONObject data, JSONObject user, JSONObject node) {
+		this.transactionData = data;
+		this.userD = user;
+		this.node = node;
+		
+	}
 	  
+	
+	
+	
+	
 	
 	
 	/*
@@ -51,42 +82,6 @@ public class Transaction {
 	 * 	OPERATION ON TRANSACTION 
 	 * 
 	 */
-	public void setData (String str) 
-	{
-		
-		JSONObject jArr = new JSONObject();
-		
-		jArr.append("Type", "String" );
-		jArr.append("Name", "String" );
-		jArr.append("Lenght", str.length() );
-		jArr.append("Owner", user.getData() );
-
-		
-		
-		data.append("info", jArr);
-		data.append("tipo", "String");
-		data.append("data", str);
-		
-	}
-	
-	
-	public void setObject(File file) 
-	{
-		
-		JSONObject jArr = new JSONObject();
-		
-		jArr.append("Type", file.getName().substring( file.getName().lastIndexOf(".") ) );
-		jArr.append("Name", file.getName() );
-		jArr.append("Lenght", file.length() );
-		jArr.append("Owner", user.getData() );
-		
-		
-		
-		data.append("info", jArr);
-		data.append("tipo", "file");
-		data.append("data", file);
-		
-	}
 	
 	
 	/*
@@ -94,33 +89,30 @@ public class Transaction {
 	 * GET
 	 * 
 	 */
-	public Users getUser() 
-	{
-		return user;
-	}
-	
-	public void serUser(Users user)
-	{
-		this.user = user;
-	}
-	
-	public String getUserID() { 
-		return this.userID;
-	}
 	
 	public JSONObject getTransaction() 
 	{
-		return data;
+		return transactionData;
 	}
 	
 	public int getLenght() 
 	{
-		return data.toString().length();
+		return transactionData.toString().length();
 	}
 	
 	public byte[] getByte() 
 	{
-		return this.data.toString().getBytes() ;
+		ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+		
+		try {
+			arrayOutputStream.write( this.transactionData.toString().getBytes() );
+			arrayOutputStream.write( this.userD.toString().getBytes() );
+			arrayOutputStream.write( this.node.toString().getBytes() );
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return arrayOutputStream.toByteArray();
 	}
 
 	public String getSByte() 
@@ -140,9 +132,9 @@ public class Transaction {
 	public JSONObject toJObj() {
 		JSONObject jObj = new JSONObject();
 		
-		jObj.append("data", this.data);
- 		jObj.append("userId", user.getIndex() );
-
+		jObj.put("transactionData", this.transactionData);
+ 		jObj.put("user", this.userD);
+ 		jObj.put("node", this.node);
 
 		return jObj;
 		
@@ -152,17 +144,39 @@ public class Transaction {
 	public static Transaction ObjFromJSON(JSONObject jObj) {
 		
 		
-		JSONObject dataJ = (JSONObject) jObj.get("data");
-		String userId = (String) jObj.get("userId");
+		JSONObject dataJ = jObj.getJSONObject("transactionData");
+		JSONObject userJ = jObj.getJSONObject("user");
+		JSONObject nodeJ = jObj.getJSONObject("node");		 
 		
 		
-		return new Transaction(userId, dataJ);
+		
+		return new Transaction(dataJ, userJ, nodeJ);
 	}
+
+	public void setNodeDeestination(String nodeHostName, int nodePort, int nodeIndex) {
+		
+		String dateTime = LocalDateTime.now().format( DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss") );
+		
+		this.node.put("HostName", nodeHostName);
+		this.node.put("Port", nodePort);
+		this.node.put("Index", nodeIndex);
+		this.node.put("dataSending", dateTime );
+		
+	}
+	
+	
+
+
+	
+
+	
+
+	
+	
 
 	@Override
 	public String toString() {
-		return "Transaction [data=" + data + ", user=" + user + ", userID=" + userID + "]";
+		return "Transaction [transactionData=" + transactionData + ", userD=" + userD + ", node=" + node + "]";
 	}
-	
-	
+
 }

@@ -16,6 +16,7 @@ public class JTest {
 	public void NodeAndGuaranteer() {
 
 		// PORTS DEFINITION
+		int nodeIndex = 1;
 		String hostNode = "localhost";
 		int portNode = 8011;
 
@@ -31,7 +32,7 @@ public class JTest {
 
 		// NODE
 		System.out.println("\nStart new Node: ");
-		Node node = new Node(hostNode, portNode, hostGuaranteer, portGuaranteer, 1 );
+		Node node = new Node(hostNode, portNode, hostGuaranteer, portGuaranteer, nodeIndex );
 		System.err.println("Node is start with success on  port: " + portNode);
 
 		try { Thread.sleep(1000); } catch (InterruptedException e) { e.printStackTrace(); }
@@ -42,7 +43,8 @@ public class JTest {
 		System.err.println("\nStart user 1");
 		Users u = new Users("1", 100, 5);
 		u.generateRSAKkeyPair();
-
+		u.setCurrentNode( node );
+		
 		try { Thread.sleep(100); } catch (InterruptedException e) { e.printStackTrace(); }
 
 		System.err.println("User is start  with success.\n\n");
@@ -61,7 +63,7 @@ public class JTest {
 		for (int i=0; i<30; i++) {
 
 			JSONObject testTras = new JSONObject();
-			testTras.put("data", "testInput di testo arbitrario");
+			testTras.put("datas", "testInput di testo arbitrario");
 			testTras.put("index", i);
 
 			Transaction t = new Transaction(u, testTras);
@@ -69,19 +71,17 @@ public class JTest {
 
 			
 			
+			// Send some data to node and read return transaction
+			JSONObject responseTransaction = u.sendTransaction( t, hostNode, portNode, nodeIndex );	
+			System.err.println("BlockIndex: " +  responseTransaction.get("BlockIndex") + "\tIndex: " + i );
 			
-			// send some data to node
-			JSONObject transactionIndex = new JSONObject( u.sendTransaction( t, hostNode, portNode) );	
 			
 			try { Thread.sleep(100); } catch (InterruptedException e) { e.printStackTrace(); }
-
-			System.err.println("BlockIndex: " +  transactionIndex.get("BlockIndex") );
-			
 		}
 
 		try 
 		{ 
-			String getDatas = u.getTransactionByIndex("0x1a" ,hostNode, portNode);
+			String getDatas = u.getTransactionByIndex("1x5a" ,hostNode, portNode);
 			
 			System.err.println("\n\nOutputDatas: " + getDatas );
 		} 

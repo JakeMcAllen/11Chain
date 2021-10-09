@@ -11,7 +11,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.util.Scanner;
 
 import org.json.JSONObject;
 
@@ -21,28 +20,46 @@ import chain.component.Transaction;
 public class Users {
 	
 	
-	private String index;
-	
+	private String index;	
 	private String name;
-	
+	private String surname;
 	
 	
 	// Keys
 	private PrivateKey privateKey = null;
-	private PublicKey publicKey = null;
-	
-	
-	// Balance
+	private PublicKey publicKey = null;	
 	private long balance;
 	
-	// Permissions   from 0 to 5   ( from Low to Hight )
-	private int permissions;
 	
-	// data
+	// Final datas about Users
 	private byte[] data;
- 	
-	// Node Adders
+
 	
+	
+	
+	
+	
+	
+	// Permissions   from 0 to 5   ( from Low to Hight )
+		private int permissions;
+		
+	
+	// TODO: List about past action of user
+	
+	
+	
+	// Info about node connection
+	private int nodeConnectionIndex;
+	private String nodeConnectionHostName;
+	private int nodeConnectionPort;
+	
+	
+	
+	
+	// Company info
+	private String CompanyName;
+	private int CompanyIndex;
+	private int CompanyNodeIndex;
 	
 	
 	
@@ -70,6 +87,27 @@ public class Users {
 	}
 
 
+	public Users(String index, String name, PrivateKey privateKey, PublicKey publicKey, long balance, int permissions,
+			byte[] data, int nodeConnectionIndex, String nodeConnectionHostName, int nodeConnectionPort,
+			String companyName, int companyIndex, int companyNodeIndex) {
+		super();
+		this.index = index;
+		this.name = name;
+		this.privateKey = privateKey;
+		this.publicKey = publicKey;
+		this.balance = balance;
+		this.permissions = permissions;
+		this.data = data;
+		this.nodeConnectionIndex = nodeConnectionIndex;
+		this.nodeConnectionHostName = nodeConnectionHostName;
+		this.nodeConnectionPort = nodeConnectionPort;
+		CompanyName = companyName;
+		CompanyIndex = companyIndex;
+		CompanyNodeIndex = companyNodeIndex;
+	}
+
+	
+
 
 
 
@@ -94,21 +132,17 @@ public class Users {
 	public void setIndex(String index) {
 		this.index = index;
 	}
-
-	public PrivateKey getPrivateKey() {
-		return privateKey;
-	}
-
-	public void setPrivateKey(PrivateKey privateKey) {
-		this.privateKey = privateKey;
-	}
 	
+	public String getSurname() {
+		return surname;
+	}
+
+	public void setSurname(String surname) {
+		this.surname = surname;
+	}
+
 	public PublicKey getPublicKey() {
 		return publicKey;
-	}
-
-	public void setPublicKey(PublicKey publicKey) {
-		this.publicKey = publicKey;
 	}
 
 	public long getBalance() {
@@ -134,6 +168,68 @@ public class Users {
 	public void setDatas(byte[] data) {
 		this.data = data;
 	}
+	
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getNodeConnectionIndex() {
+		return nodeConnectionIndex;
+	}
+
+	public void setNodeConnectionIndex(int nodeConnectionIndex) {
+		this.nodeConnectionIndex = nodeConnectionIndex;
+	}
+
+	public String getNodeConnectionHostName() {
+		return nodeConnectionHostName;
+	}
+
+	public void setNodeConnectionHostName(String nodeConnectionHostName) {
+		this.nodeConnectionHostName = nodeConnectionHostName;
+	}
+
+	public int getNodeConnectionPort() {
+		return nodeConnectionPort;
+	}
+
+	public void setNodeConnectionPort(int nodeConnectionPort) {
+		this.nodeConnectionPort = nodeConnectionPort;
+	}
+
+	public String getCompanyName() {
+		return CompanyName;
+	}
+
+	public void setCompanyName(String companyName) {
+		CompanyName = companyName;
+	}
+
+	public int getCompanyIndex() {
+		return CompanyIndex;
+	}
+
+	public void setCompanyIndex(int companyIndex) {
+		CompanyIndex = companyIndex;
+	}
+
+	public int getCompanyNodeIndex() {
+		return CompanyNodeIndex;
+	}
+
+	public void setCompanyNodeIndex(int companyNodeIndex) {
+		CompanyNodeIndex = companyNodeIndex;
+	}
+
+	public void setData(byte[] data) {
+		this.data = data;
+	}
+
+	
 
 	
 
@@ -148,6 +244,14 @@ public class Users {
 	 * 
 	 * 
 	 */
+	
+	// set Node info
+	public void setCurrentNode(Node n) {
+		setNodeConnectionIndex( n.getIndex() );
+		setNodeConnectionHostName( n.getSocketHostName() );
+		setNodeConnectionPort( n.getSocketPort() );
+		
+	}
 	
 	// Private and Public Key
 	public void generateRSAKkeyPair() 
@@ -170,16 +274,18 @@ public class Users {
 		
 		
 		System.out.println("\n\n----------KEYS CREATION END----------" + "\n" + 
-				"Private key: " + this.getPrivateKey() + "\n" + 
-				"Public key: " + this.getPublicKey() + "\n" + 
+				"Private key: " + key.getPrivate() + "\n" + 
+				"Public key: " + key.getPublic() + "\n" + 
 				"----------KEYS CREATION START----------\n\n" );
 	}
 	
 	// Send transaction
-	public String sendTransaction( Transaction t, String guarantorHostname, int guarantorPort ) 
+	// TODO: When error try to resends it
+	public JSONObject sendTransaction( Transaction t, String nodeHostname, int nodePort, int nodeIndex ) 
 	{
 		
 		String returnStr = "";
+		t.setNodeDeestination(nodeHostname, nodePort, nodeIndex);
 		
 		JSONObject jObj = new JSONObject();
 		jObj.put("ActionToPerform", "postTransactionInPool");
@@ -187,7 +293,7 @@ public class Users {
 		Socket s = null;
 		
 		try {
-			s = new Socket(guarantorHostname, guarantorPort);
+			s = new Socket(nodeHostname, nodePort);
 
 			
 		    try (
@@ -211,7 +317,7 @@ public class Users {
 		catch (Exception e) {}
 
 		
-		return returnStr;
+		return new JSONObject( returnStr );
 	}
 	
 	public String getTransactionByIndex( String transactionHash, String guarantorHostname, int guarantorPort  )
@@ -259,84 +365,6 @@ public class Users {
 	
 	
 	
-	
-	
-	public static void main(String[] args) {
-		
-		boolean isRunning = true;
-		
-		
-		try {
-			
-			// TODO: load user from file
-			Users u = new Users();
 
-			
-			
-			Scanner s = new Scanner(System.in);
-			
-			
-			while ( isRunning ) {
-				
-			    String userInput = s.next();
-			    
-			    
-			    // TODO: Add new actions to perform
-			    switch (userInput) {
-			    
-				case "stop": {
-					
-					isRunning = false;
-					break;
-				}
-				
-				case "tctn": {
-					
-					// TODO: Test connection to node
-					break;
-				}
-				
-				case "createKey": {
-					
-					if ( u.getPrivateKey() != null )
-					{
-						u.generateRSAKkeyPair();
-					}
-					
-					break;
-				}
-				
-				case "sendTransaction":
-					
-				    String str = s.next();
-				    if ( str == "" ) 
-				    {
-					    Transaction t = new Transaction(u, str);
-					    u.sendTransaction(t, "localhost", 8081);	
-				    }
-					break;
-									
-				case "getTransaction": {
-
-				    String transactionHash = s.next();
-				    u.getTransactionByIndex(transactionHash, "localhost", 8081);
-					break;
-				}
-				
-				default:
-					throw new IllegalArgumentException("Unexpected value: " + userInput);
-				}		
-				
-			    
-			}
-			
-			
-		    s.close();
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
 	
 }

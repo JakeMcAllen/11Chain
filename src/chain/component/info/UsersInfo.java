@@ -15,6 +15,7 @@ public class UsersInfo {
 	private String index;
 	private String name;
 	private String surname;
+	
 	private long balance;
 	private PublicKey publicKey = null;
 
@@ -29,13 +30,20 @@ public class UsersInfo {
 	// Permissions   from 0 to 5   ( from Low to Height )
 	private int permissions;
 
+	
 
+	// Info about node connection
+	private int nodeConnectionIndex;
+	private String nodeConnectionHostName;
+	private int nodeConnectionPort;
 	
-	// Company info of worker
-	private String companyName;
-	private int companyId;
-	private int companyNodeIndex;
 	
+	
+	
+	// Company info
+	private String CompanyName;
+	private int CompanyIndex;
+	private int CompanyNodeIndex;
 	
 	
 	
@@ -54,9 +62,10 @@ public class UsersInfo {
 		this.permissions = permissions;
 		this.data = data;
 	}
-	
+
 	public UsersInfo(String index, String name, String surname, long balance, PublicKey publicKey, byte[] data,
-			int permissions, String companyName, int companyId, int companyNodeIndex) {
+			int permissions, int nodeConnectionIndex, String nodeConnectionHostName, int nodeConnectionPort,
+			String companyName, int companyIndex, int companyNodeIndex) {
 		super();
 		this.index = index;
 		this.name = name;
@@ -65,10 +74,14 @@ public class UsersInfo {
 		this.publicKey = publicKey;
 		this.data = data;
 		this.permissions = permissions;
-		this.companyName = companyName;
-		this.companyId = companyId;
-		this.companyNodeIndex = companyNodeIndex;
+		this.nodeConnectionIndex = nodeConnectionIndex;
+		this.nodeConnectionHostName = nodeConnectionHostName;
+		this.nodeConnectionPort = nodeConnectionPort;
+		CompanyName = companyName;
+		CompanyIndex = companyIndex;
+		CompanyNodeIndex = companyNodeIndex;
 	}
+
 
 
 
@@ -133,40 +146,64 @@ public class UsersInfo {
 		this.surname = surname;
 	}
 
+	public int getNodeConnectionIndex() {
+		return nodeConnectionIndex;
+	}
+
+	public void setNodeConnectionIndex(int nodeConnectionIndex) {
+		this.nodeConnectionIndex = nodeConnectionIndex;
+	}
+
+	public String getNodeConnectionHostName() {
+		return nodeConnectionHostName;
+	}
+
+	public void setNodeConnectionHostName(String nodeConnectionHostName) {
+		this.nodeConnectionHostName = nodeConnectionHostName;
+	}
+
+	public int getNodeConnectionPort() {
+		return nodeConnectionPort;
+	}
+
+	public void setNodeConnectionPort(int nodeConnectionPort) {
+		this.nodeConnectionPort = nodeConnectionPort;
+	}
+
 	public String getCompanyName() {
-		return companyName;
+		return CompanyName;
 	}
 
 	public void setCompanyName(String companyName) {
-		this.companyName = companyName;
+		CompanyName = companyName;
 	}
 
-	public int getCompanyId() {
-		return companyId;
+	public int getCompanyIndex() {
+		return CompanyIndex;
 	}
 
-	public void setCompanyId(int companyId) {
-		this.companyId = companyId;
+	public void setCompanyIndex(int companyIndex) {
+		CompanyIndex = companyIndex;
 	}
 
 	public int getCompanyNodeIndex() {
-		return companyNodeIndex;
+		return CompanyNodeIndex;
 	}
 
 	public void setCompanyNodeIndex(int companyNodeIndex) {
-		this.companyNodeIndex = companyNodeIndex;
+		CompanyNodeIndex = companyNodeIndex;
 	}
 
-
+	
 	
 	
 	@Override
 	public String toString() {
 		return "UsersInfo [index=" + index + ", name=" + name + ", surname=" + surname + ", balance=" + balance
 				+ ", publicKey=" + publicKey + ", data=" + Arrays.toString(data) + ", permissions=" + permissions
-				+ ", companyName=" + companyName + ", companyId=" + companyId + ", companyNodeIndex=" + companyNodeIndex
-				+ "]";
+				+ ", nodeConnectionIndex=" + nodeConnectionIndex + ", nodeConnectionHostName=" + nodeConnectionHostName
+				+ ", nodeConnectionPort=" + nodeConnectionPort + ", CompanyName=" + CompanyName + ", CompanyIndex="
+				+ CompanyIndex + ", CompanyNodeIndex=" + CompanyNodeIndex + "]";
 	}
-
-
+	
 }

@@ -245,21 +245,17 @@ public class Node {
 	// TODO: Da rivedere che funzioni bene ! ! ! 
 	private Block AddNextBlock( BufferedReader in ) {
 
-
 		try {
 			String str = in.readLine();
-
 			Block nBlock = Block.generateBlockFromJSON( new JSONObject( str ) );
 
 
 			for ( int i=0; i < nBlock.SiblingBlockNumber(); i++ ) 
 			{
-				
-				
 				Block b = AddNextBlock( in );
 				nBlock.addSiblingBlock( b );
+			
 			}
-
 
 			if ( nBlock.hasNextBlock() ) 
 			{
@@ -366,8 +362,6 @@ public class Node {
 				case "readTransaction":
 
 					returnString = getTransactionFromObject( jObj );
-
-
 					break;
 
 				case "readBlock":
@@ -468,6 +462,7 @@ public class Node {
 			nextB = (nextB == null) ? Head : nextB.getNextBlock();
 			JSONObject jObj = nextB.toJSON();
 			
+			
 			// cerca blocco
 			if ( jObj.getString("index").equals(blockIndex) )
 			{
@@ -485,25 +480,15 @@ public class Node {
 		Block nBlock = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
 		
 		try {
-			if ( Head == null)
-			{
-				Head = Tail = nBlock;
-			} 
-				else 
-			{	
-				
+			if ( Head == null) Head = Tail = nBlock;
+			else {
 				Tail.setNextBlock( nBlock );
 				Tail.setHasNext( true );
 				Tail = nBlock;
-				
-				System.out.println("\nnBlock: " + nBlock.toJSON() + "\n" );
-	
+					
 			}
 
-		} catch (Exception e) {
-			System.err.println("Error in Node");
-			e.printStackTrace();
-		}
+		} catch (Exception e) { e.printStackTrace(); }
 			
 	}
 
@@ -667,6 +652,26 @@ public class Node {
 	{
 		return this.publicKey;
 	}
+
+	public String getSocketHostName() {
+		return socketHostName;
+	}
+
+	public void setSocketHostName(String socketHostName) {
+		this.socketHostName = socketHostName;
+	}
+
+	public int getSocketPort() {
+		return socketPort;
+	}
+
+	public void setSocketPort(int socketPort) {
+		this.socketPort = socketPort;
+	}
+
+
+
+	
 
 
 

@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.crypto.BadPaddingException;
@@ -296,8 +297,7 @@ public class Block {
 	
 	
 	public static Block generateBlockFromJSON( JSONObject jObj ) 
-	{	
-		
+	{
 		Block b = new Block();
 		
 		try {
@@ -314,7 +314,9 @@ public class Block {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-						
+	
+		System.out.println("\nNew Block \n");
+		
 		return b;
 	}
 	
@@ -332,7 +334,6 @@ public class Block {
 		
 		ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
 		
-		
 		try {
 			
 			arrayOutputStream.write( "[".getBytes() );
@@ -341,15 +342,12 @@ public class Block {
 			for ( int i=0 ; i < pool.size() ; i++ ) 
 			{
 				Transaction t = pool.get(i);
-				
-				try {
-										
+								
+				try {	
 					if (i > 0) arrayOutputStream.write( ",".getBytes() );
-					arrayOutputStream.write( t.getByte() );
+					arrayOutputStream.write( t.toJObj().toString().getBytes() );
 					
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				} catch (IOException e) { e.printStackTrace(); }
 				
 			}
 			
@@ -387,13 +385,9 @@ public class Block {
 				
 		try {
 			JSONArray jo = new JSONArray( new String( (byte[]) jObj.get( "data" ) ) );
+			return jo.getJSONObject(position - 1).toString();
 			
-			return jo.getJSONObject(position).toString();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		
+		} catch (Exception e) { e.printStackTrace(); }
 		
 		return str;
 	}
@@ -421,25 +415,7 @@ public class Block {
 		
 		
 		return jObj;
-	}
-	
-
-
-	
-	
-	
-	
-	@Override
-	public String toString() {
-		return "Block [hash=" + hash + ", index=" + index + ", status=" + status
-				+ ", timeData=" + timeData + ", size=" + size + ", gas=" + gas + ", parentNode=" + parentNode
-				+ ", listSCDataConnected=" + listSCDataConnected + ", parentHash=" + parentHash + ", hasNext=" + hasNext
-				+ ", numberOfSiblingBlock=" + numberOfSiblingBlock + ", parentBlock=" + parentBlock + ", siblingBlock=" + siblingBlock + "]";
-	}
-
-	
-	
-	
+	}	
 	
 	
 	public void generateHash(KeyPair key) { 
@@ -468,7 +444,6 @@ public class Block {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 
 	}
 	
@@ -509,8 +484,16 @@ public class Block {
 	{
 		return index.length() == 2 ? true : false;
 	}
-
-
 	
+	
+
+	@Override
+	public String toString() {
+		return "Block [hash=" + hash + ", data=" + Arrays.toString(data) + ", index=" + index + ", status=" + status
+				+ ", timeData=" + timeData + ", size=" + size + ", gas=" + gas + ", parentNode=" + parentNode
+				+ ", listSCDataConnected=" + listSCDataConnected + ", parentHash=" + parentHash + ", hasNext=" + hasNext
+				+ ", numberOfSiblingBlock=" + numberOfSiblingBlock + ", parentBlock=" + parentBlock + ", nextBlock="
+				+ nextBlock + ", siblingBlock=" + siblingBlock + "]";
+	}
 	
 }
