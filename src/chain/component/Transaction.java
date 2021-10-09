@@ -15,14 +15,14 @@ public class Transaction {
 	
 		
 	private JSONObject transactionData;
-	private JSONObject userD;
+	private JSONObject user;
 	private JSONObject node;
 	
 	
 	
 
 	public Transaction() {
-		userD = new JSONObject();
+		user = new JSONObject();
 		node = new JSONObject();
 	}
 	
@@ -38,16 +38,16 @@ public class Transaction {
 		
 		
 		
-		this.userD.put("index", user.getIndex() );
-		this.userD.put("name", user.getName() );
-		this.userD.put("surname", user.getSurname() );
-		this.userD.put("balance", user.getBalance() );
-		this.userD.put("publicKey", user.getPublicKey() );
-		this.userD.put("data", user.getData() );
-		this.userD.put("permission", user.getPermissions() );
-		this.userD.put("CompanyName", user.getCompanyName() );
-		this.userD.put("CompanyIndex", user.getCompanyIndex() );
-		this.userD.put("CompanyNodeIndex", user.getCompanyNodeIndex() );
+		this.user.put("index", user.getIndex() );
+		this.user.put("name", user.getName() );
+		this.user.put("surname", user.getSurname() );
+		this.user.put("balance", user.getBalance() );
+		this.user.put("publicKey", user.getPublicKey() );
+		this.user.put("data", user.getData() );
+		this.user.put("permission", user.getPermissions() );
+		this.user.put("CompanyName", user.getCompanyName() );
+		this.user.put("CompanyIndex", user.getCompanyIndex() );
+		this.user.put("CompanyNodeIndex", user.getCompanyNodeIndex() );
 		
 		
 	}
@@ -66,7 +66,7 @@ public class Transaction {
 
 	public Transaction(JSONObject data, JSONObject user, JSONObject node) {
 		this.transactionData = data;
-		this.userD = user;
+		this.user = user;
 		this.node = node;
 		
 	}
@@ -106,7 +106,7 @@ public class Transaction {
 		
 		try {
 			arrayOutputStream.write( this.transactionData.toString().getBytes() );
-			arrayOutputStream.write( this.userD.toString().getBytes() );
+			arrayOutputStream.write( this.user.toString().getBytes() );
 			arrayOutputStream.write( this.node.toString().getBytes() );
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -133,7 +133,7 @@ public class Transaction {
 		JSONObject jObj = new JSONObject();
 		
 		jObj.put("transactionData", this.transactionData);
- 		jObj.put("user", this.userD);
+ 		jObj.put("user", this.user);
  		jObj.put("node", this.node);
  		jObj.put("transactionDataLength", this.transactionData.toString().length() );
  		 		
@@ -177,7 +177,7 @@ public class Transaction {
 
 	@Override
 	public String toString() {
-		return "Transaction [transactionData=" + transactionData + ", userD=" + userD + ", node=" + node + "]";
+		return "Transaction [transactionData=" + transactionData + ", userD=" + user + ", node=" + node + "]";
 	}
 
 }

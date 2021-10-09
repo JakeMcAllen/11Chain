@@ -1,10 +1,5 @@
 package chain.test;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Timer;
-import java.util.TimerTask;
-
 import org.json.JSONObject;
 import org.junit.Test;
 
@@ -44,7 +39,8 @@ public class JTest {
 
 		// USERS
 		System.err.println("\nStart user 1");
-		Users u = new Users("1", 100, 5);
+		Users u = new Users("1", 100, 5, null, "Utente", "Utnt");
+		
 		u.generateRSAKkeyPair();
 		u.setCurrentNode( node );
 

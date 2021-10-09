@@ -30,13 +30,10 @@ import chain.component.Block;
  * 	Node of network
  * 
  * 		TODO:
- * 			1) Connection to other Node ( private key, hostName and Port )
  * 			2) Guaranteer / user  connection
  * 			3) Smart contract
  * 			4) Data reading and execution of smart contract ( API for smartContract )
  * 			5) Control Node status from command line
- * 			6) Controller for waiting transaction. Can delete old transaction;
- * 			7) String stamp of Node action. Runtime.
  * 			8) Control of errors. Like when guaranteer is close.
  * 			9) Data encription and decription
  * 
@@ -242,7 +239,6 @@ public class Node {
 	}
 
 	// Metodo ricorsivo per caricare la chain
-	// TODO: Da rivedere che funzioni bene ! ! ! 
 	private Block AddNextBlock( BufferedReader in ) {
 
 		try {
@@ -254,7 +250,7 @@ public class Node {
 			{
 				Block b = AddNextBlock( in );
 				nBlock.addSiblingBlock( b );
-			
+
 			}
 
 			if ( nBlock.hasNextBlock() ) 
@@ -329,17 +325,14 @@ public class Node {
 					// In out stream
 					PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 					BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-				) {
+					) {
 
 				// Response string
 				String returnString = "";
-				String input = in.readLine();
+				JSONObject jObj = new JSONObject( in.readLine() );
 
-				JSONObject jObj = new JSONObject( input );
 
-				
 
-				// TODO: Add other action to perform
 				switch ( jObj.getString("ActionToPerform") ) {
 
 				case "postTransactionInPool":
@@ -360,14 +353,14 @@ public class Node {
 
 					returnString = getTransactionFromObject( jObj );
 					break;
-					
+
 				case "setNewBlock":
-					
+
 					setNewBlock( jObj );
 					break;
 
 				case "setNewBlockToMilestone":
-					
+
 					Block b = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
 					this.node.MileStone.put(b.getIndex(), b );
 					break;
@@ -376,10 +369,8 @@ public class Node {
 					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 				}
 
-
-				// return response 
+				
 				out.println(returnString);
-
 
 			} catch (Exception e) {
 				System.err.println("Error in 'ResponseThread Node': " + e.getMessage() );		
@@ -411,40 +402,27 @@ public class Node {
 		return returnString;
 	}
 
-	private String readBlock( JSONObject jObj ) {
-
-		// TODO: case smartContract block ! ! !
-
-		String returnString = "";
-		System.err.println("Error in Node: readBlock");
-		String blockName = jObj.getString("BlockHash").split("x")[1];
-
-		MileStone.get(blockName);
-
-		return returnString;
-	}
-
 	private String getTransactionFromObject( JSONObject jsonObject ) {
 
 		int transactionNumber = Integer.parseInt( jsonObject.getString("BlockIndex").split("x")[0] );
 		String blockIndex = jsonObject.getString("BlockIndex").split("x")[1];
-		
+
 		Block nb = null;
 		do {
 			nb = (nb == null) ? Head : nb.getNextBlock();			
 		} while ( nb.hasNextBlock() );
-		
-		
-		
-		
-		
+
+
+
+
+
 		Block nextB = null;
 		do {
-			
+
 			nextB = (nextB == null) ? Head : nextB.getNextBlock();
 			JSONObject jObj = nextB.toJSON();
-			
-			
+
+
 			// cerca blocco
 			if ( jObj.getString("index").equals(blockIndex) )
 			{
@@ -454,24 +432,24 @@ public class Node {
 			}
 
 		} while ( true );
-		
+
 	}
 
 	private void setNewBlock( JSONObject jObj ) 
 	{
 		Block nBlock = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
-		
+
 		try {
 			if ( Head == null) Head = Tail = nBlock;
 			else {
 				Tail.setNextBlock( nBlock );
 				Tail.setHasNext( true );
 				Tail = nBlock;
-					
+
 			}
 
 		} catch (Exception e) { e.printStackTrace(); }
-			
+
 	}
 
 	private void setNewSCBlock( JSONObject jObj ) { 
@@ -629,9 +607,7 @@ public class Node {
 		return Head;
 	}
 
-	// TODO:  get of variables
-	public PublicKey getPublicKey() 
-	{
+	public PublicKey getPublicKey() {
 		return this.publicKey;
 	}
 
@@ -653,7 +629,7 @@ public class Node {
 
 
 
-	
+
 
 
 
@@ -706,83 +682,5 @@ public class Node {
 	}
 
 
-
-
-
-
-
-
-
-
-
-	/*
-	 * 
-	 * 		MAIN
-	 * 
-	 * 	
-	 * 	Comands: 
-	 * 		1) STOP:	Ferma l'esecuzione del nodo;
-	 * 		2) 	
-	 * 
-	 */
-	public static void main(String[] args) {
-
-
-		boolean isRunning = true;
-
-		System.out.println("Run:");
-
-
-		int portLocal = 8081;
-
-		String hostGuaranteer = "localhost";
-		int portGuaranteer = 8082;
-
-
-		Node node = null;
-		try {
-
-			System.out.println("Start new Node: ");
-			node = new Node(hostGuaranteer, portLocal, hostGuaranteer, portGuaranteer, 0 );
-			System.out.println("Node is start with success.");			
-
-
-			Scanner s = new Scanner(System.in);
-
-
-			while ( isRunning ) {
-
-				String userInput = s.next();
-
-
-				// TODO: Add new actions to perform
-				switch (userInput) {
-				case "stop": {
-
-					isRunning = false;
-					node.setListenerIsActive( false );
-					break;
-				}
-				case "tctg": {
-
-					// Test connection to guaranteer
-					break;
-				}
-
-
-				default:
-					throw new IllegalArgumentException("Unexpected value: " + userInput);
-				}		
-
-
-			}
-
-
-			s.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 
 }

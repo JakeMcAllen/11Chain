@@ -75,12 +75,10 @@ public class Users {
 
 
 
-	public Users(String index, PrivateKey privateKey, PublicKey publicKey, long balance, int permissions,
-			byte[] datas) {
+	public Users(String index, long balance, int permissions,
+			byte[] datas, String name, String surname) {
 		super();
 		this.index = index;
-		this.privateKey = privateKey;
-		this.publicKey = publicKey;
 		this.balance = balance;
 		this.permissions = permissions;
 		this.data = datas;

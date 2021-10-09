@@ -7,11 +7,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
@@ -24,14 +21,7 @@ import chain.component.Transaction;
 import chain.component.info.NodeInfo;
 import chain.component.info.UsersInfo;
 
-/*
- * 
- * 	TODO:
- * 		Aggiungere azioni disponibili da richiamare
- * 		Milestone creato su base giornaliera ( mandare milestone )
- * 
- * 
- */
+
 public class Guaranteer {
 
 	/*
@@ -58,7 +48,6 @@ public class Guaranteer {
 	private String currentBlockIndex;
 
 
-	// TODO: controllare che vada bene ... 
 	private HashMap<String, Block> MileStone;
 
 
@@ -105,7 +94,7 @@ public class Guaranteer {
 		this.MileStone = new HashMap<String, Block>();
 		this.socketPort = socketPort;
 
-		
+
 		creteNode = new Guaranteer.createNode( this );
 
 		nodeList = new ArrayList<NodeInfo> ();
@@ -124,9 +113,9 @@ public class Guaranteer {
 		// thread that listen node connection to localhost
 		(new Guaranteer.getDataThread(this, socketPort)).start();
 
-		
 
-		// TODO: BlockZero sent hash and default data
+
+		// BlockZero sent hash and default data
 		Block blockZero = new Block();
 		blockZero.setIndex( "1x0a" );
 		this.currentBlockIndex = "1a";
@@ -135,21 +124,17 @@ public class Guaranteer {
 
 
 
-		
-		// Load first MileStone
-		MileStone.put(blockZero.getIndex(), blockZero);
 
-		
-		// thread that update the Milestone every day at midnight
+		// Thread that update the Milestone every day at midnight
+		MileStone.put(blockZero.getIndex(), blockZero);
 		Calendar calendar = Calendar.getInstance();
 		calendar.add(Calendar.DAY_OF_YEAR, 1);
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		calendar.set(Calendar.MINUTE, 0);
 		calendar.set(Calendar.SECOND, 0);
-		calendar.set(Calendar.MILLISECOND, 0);		
-	    
-	    ( new Timer() ).schedule( new updateMilestone( this ) , calendar.getTime(), 86400000 );
-	    
+		calendar.set(Calendar.MILLISECOND, 0);
+		( new Timer() ).schedule( new updateMilestone( this ) , calendar.getTime(), 86400000 );
+
 	}
 
 
@@ -157,7 +142,7 @@ public class Guaranteer {
 
 
 
-	
+
 
 
 
@@ -189,11 +174,12 @@ public class Guaranteer {
 		String transactionIndex = "";
 
 		// creation of a new block
+		// TODO: control size of all transaction
 		if ( ( pool.size() > blockMaxSize || t == null ) && pool.size() != 0 ) 
 		{
 			currentTransactionNumeber = 0;
 			creteNode.newBlock(pool, currentBlockIndex);
-			
+
 			currentBlockIndex = ( Integer.parseInt( currentBlockIndex.substring(0, 1) ) + 1 ) + currentBlockIndex.substring(1); 
 			pool.clear();
 		}
@@ -201,8 +187,6 @@ public class Guaranteer {
 		// Add transaction to pool
 		if (t != null) {
 			pool.add( t );
-			// currentTransactionNumeber++;
-
 
 			// return an index to caller
 			transactionIndex = ++currentTransactionNumeber + "x" + currentBlockIndex;
@@ -228,13 +212,12 @@ public class Guaranteer {
 		{
 			if ( pool.size() > 0 ) {
 
-				// TODO: Creation of a new block
 				Block b = new Block();
 				b.setIndex(currentBlockIndex);
-				
+
 				b.importDataFromPool( pool );
-				
-				
+
+
 				// Generate "listSCDataConnected"  
 				b.setIndex(currentBlockIndex);
 
@@ -248,7 +231,7 @@ public class Guaranteer {
 
 				// Send new block to all Node
 				this.guaranteer.sendToAllNodoJSON("setNewBlock", b.toJSON());
-				
+
 			}
 
 			if (!guaranteer.listenerIsActive) System.exit(0);
@@ -268,7 +251,7 @@ public class Guaranteer {
 		@Override
 		public void run()
 		{
-			// TODO: create a consistent input
+			// call for a new block with a partial number of datas
 			guaranteer.addTTPool( null );
 			if (!guaranteer.listenerIsActive) System.exit(0);
 		}
@@ -320,14 +303,13 @@ public class Guaranteer {
 		@Override
 		public void run() 
 		{
-			// TODO: Add to arguments
 			Object sincronizer = new Object();
 
 			while ( guaranteer.getListenerIsActive() ) {
 
 				try (
-					ServerSocket serverSocket = new ServerSocket( this.socketPort );
-				) {
+						ServerSocket serverSocket = new ServerSocket( this.socketPort );
+						) {
 
 					// Execute an controller for serve action
 					(new Guaranteer.ResponseThread(serverSocket.accept(), sincronizer, this.guaranteer)).start();
@@ -372,10 +354,8 @@ public class Guaranteer {
 				JSONObject returnObj = new JSONObject();
 				JSONObject jObj = null;
 
-				String currentIndex = currentBlockIndex;
 
-				
-				
+
 				// READ
 				try (
 						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -383,57 +363,23 @@ public class Guaranteer {
 						) {
 
 					jObj = new JSONObject(in.readLine());
-					
-					
-					// aDD NODE IN the node LIST
-					if ( jObj.has("NodeInfo") ) 
-					{
-						JSONObject nodeInfo = (JSONObject) jObj.get("NodeInfo");
-						
-						boolean isPresent = false;
-						for (NodeInfo nt : nodeList ) {
-							
-							if ( nt.getNodeIndex() == nodeInfo.getInt("nodeIndex") ) 
-							{
-								isPresent = true;
-							}
-							
-						}
-						
-						if ( !isPresent || nodeList.isEmpty() ) {
-							NodeInfo ni = new NodeInfo();
-							ni.setNodeHostName( nodeInfo.getString("HostName") );
-							ni.setNodePort( nodeInfo.getInt("Port") );
-							ni.setNodeIndex( nodeInfo.getInt("nodeIndex") );
-							ni.setConfidence( 1 );
-							
-							nodeList.add( ni );
-						}
-						
-					}					
-					
-					
 
-					// TODO: Add other action to perform
+					// aDD NODE IN the node LIST
+					setNodeToList(jObj);
+					System.out.println("// TODO: Non funziona ... ");
+					setUserToList(jObj);
+
+
+
+
 					switch ( jObj.getString("ActionToPerform") ) {
 
 					case "postTransactionInPool":
-
 						JSONObject trOb = (JSONObject) jObj.get("Transaction");
 						returnObj.put("BlockIndex", this.guaranteer.addTTPool( new Transaction( trOb ) ) );
 						break;
 
-					case "setNewNodeConnection":
-
-						synchronized (sincronizer) 
-						{
-							// set new NodeInfo
-							returnObj.put("ResponseString",  "");
-						}
-						break;
-
 					case "newNode": 
-												
 						synchronized (sincronizer) {
 							returnObj.put("ResponseString", addNewNode(jObj) );
 						}
@@ -442,7 +388,7 @@ public class Guaranteer {
 					case "LoadChain":
 						returnObj.put("ResponseString", loadChain(out, Head) );
 						break;
-						
+
 					default:
 						returnObj.put("ResponseString", "Inaspected error. Stop and restart application." );
 						throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
@@ -457,13 +403,6 @@ public class Guaranteer {
 
 				// close socket and stream
 				socket.close();
-				
-				
-				// TODO: If new block send it to all nodes !
-				if ( currentIndex != currentBlockIndex) {
-					
-					
-				}
 
 
 			} catch (IOException e) {
@@ -473,19 +412,74 @@ public class Guaranteer {
 
 	}
 
-	
-
-	
 
 
-	
+
+
+
+
 
 	/* 
 	 * 
 	 * 	START ACTION ON THE CHAIN
 	 * 
 	 */
-	
+
+	public void setNodeToList(JSONObject jObj ) {
+
+		if ( jObj.has("NodeInfo") ) {
+
+			JSONObject nodeInfo = (JSONObject) jObj.get("NodeInfo");
+
+			boolean isPresent = false;
+			for (NodeInfo nt : nodeList ) {
+
+				if ( nt.getNodeIndex() == nodeInfo.getInt("nodeIndex") ) 
+				{
+					isPresent = true;
+				}
+
+			}
+
+			if ( !isPresent || nodeList.isEmpty() ) {
+				NodeInfo ni = new NodeInfo();
+				ni.setNodeHostName( nodeInfo.getString("HostName") );
+				ni.setNodePort( nodeInfo.getInt("Port") );
+				ni.setNodeIndex( nodeInfo.getInt("nodeIndex") );
+				ni.setConfidence( 1 );
+
+				nodeList.add( ni );
+			}	
+		}
+	}
+
+	public void setUserToList(JSONObject jObj ) {
+
+		if ( jObj.has("user") ) {
+			JSONObject userInfo = jObj.getJSONObject("user");
+
+			boolean isPresent = false;
+			for (UsersInfo ui : userDataList ) {
+				if ( ui.getIndex().equals( userInfo.getString("index") ) ) {
+					isPresent = true;
+				}
+			}
+
+
+			if ( !isPresent || userInfo.isEmpty() ) {
+				UsersInfo ui = new UsersInfo();
+				ui.setIndex( userInfo.getString("index") );
+				ui.setName( userInfo.getString("name") );
+				ui.setSurname( userInfo.getString("surname") );
+				ui.setData( userInfo.get("data").toString().getBytes() );
+				
+				System.out.print("UI: " + ui);
+				userDataList.add( ui );
+			}	
+		}
+
+	}
+
 	public String loadChain(PrintWriter out, Block currentBlock) {
 
 
@@ -507,25 +501,25 @@ public class Guaranteer {
 
 	private class updateMilestone extends TimerTask {
 		private Guaranteer guaranteer;
-		
+
 		public updateMilestone(Guaranteer guaranteer) {
 			this.guaranteer = guaranteer;
 		}
 
-		
+
 		@Override
 		public void run() {
 			Block b = this.guaranteer.getLastBlockInserted();
-			
+
 			// Set new milestone
 			this.guaranteer.setNewMileStone( b );
-			
-			
+
+
 			// Send new block at milestone of all Node
 			this.guaranteer.sendToAllNodoJSON( "setNewBlockToMilestone", b.toJSON() );
-			
+
 		}
-		
+
 	}
 
 	/* 
@@ -558,7 +552,7 @@ public class Guaranteer {
 				.stream()
 				.filter( 
 						inf -> inf.getNodeIndex() == jo.getInt("Index")
-				)
+						)
 				.count() > 0 ) 
 		{
 			return "nodeAddFail";
@@ -574,29 +568,29 @@ public class Guaranteer {
 
 		return "nodeAddSuccess";
 	}
-	
-	
+
+
 	private void sendToAllNodoJSON( String message, JSONObject obj ) {
 		nodeList.stream().forEach( e -> {
 
 			try {
-				
-			    try (
+
+				try (
 						Socket s = new Socket(e.getNodeHostName(), e.getNodePort());
 
-			            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-			    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-			    ) {
-			    	
-			    	JSONObject jObj = new JSONObject();
-			    	jObj.put("ActionToPerform", message);
-			    	jObj.put("NewBlock", obj );
-			    	
-			    	out.println( jObj.toString() );
+						PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+						BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+						) {
 
-			    }
-				
-				
+					JSONObject jObj = new JSONObject();
+					jObj.put("ActionToPerform", message);
+					jObj.put("NewBlock", obj );
+
+					out.println( jObj.toString() );
+
+				}
+
+
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
@@ -623,7 +617,7 @@ public class Guaranteer {
 	private Block getLastBlockInserted() {
 		return this.lastInsertBlock;
 	}
-	
-	
-	
+
+
+
 }
