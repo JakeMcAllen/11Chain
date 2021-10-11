@@ -1,6 +1,10 @@
 package chain.main;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -13,58 +17,77 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 
 import org.json.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import chain.component.Transaction;
 
 
 public class Users {
-	
-	
+
+
 	private String index;	
 	private String name;
 	private String surname;
-	
-	
+
+
 	// Keys
 	private PrivateKey privateKey = null;
 	private PublicKey publicKey = null;	
 	private long balance;
-	
-	
+
+
 	// Final datas about Users
 	private byte[] data;
 
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 	// Permissions   from 0 to 5   ( from Low to Hight )
-		private int permissions;
-		
-	
+	private int permissions;
+
+
 	// TODO: List about past action of user
-	
-	
-	
+
+
+
 	// Info about node connection
 	private int nodeConnectionIndex;
 	private String nodeConnectionHostName;
 	private int nodeConnectionPort;
-	
-	
-	
-	
+
+
+
+
 	// Company info
 	private String CompanyName;
 	private int CompanyIndex;
 	private int CompanyNodeIndex;
-	
-	
-	
-	
-	public Users() {}
+
+
+	// path of file where are saved files
+	private String pathFile = "\\src\\chain\\files\\users.json";
+
+
+
+
+	public Users() {
+		
+		// control if file is present
+		this.pathFile =  System.getProperty("user.dir").concat( this.pathFile );
+		File f = new File(this.pathFile);
+
+		if( !f.exists() )
+		{
+			// create the file if it's dose'nt exist
+			try { f.createNewFile(); } 
+			catch (IOException e) { e.printStackTrace(); }
+		}
+
+	}
 
 	public Users(String index, long balance, int permissions) {
 		super();
@@ -104,7 +127,23 @@ public class Users {
 		CompanyNodeIndex = companyNodeIndex;
 	}
 
-	
+	public Users(String filePath) throws FileNotFoundException, IOException, ParseException {
+		this.pathFile = filePath;
+
+		this.pathFile =  System.getProperty("user.dir").concat( this.pathFile );
+		File f = new File(this.pathFile);
+
+		if( !f.exists() )
+		{
+			// create the file if it's dose'nt exist
+			try { f.createNewFile(); } 
+			catch (IOException e) { e.printStackTrace(); }
+		} else {
+			loadUsersFromFile();
+		}
+	}
+
+
 
 
 
@@ -130,7 +169,7 @@ public class Users {
 	public void setIndex(String index) {
 		this.index = index;
 	}
-	
+
 	public String getSurname() {
 		return surname;
 	}
@@ -166,7 +205,7 @@ public class Users {
 	public void setDatas(byte[] data) {
 		this.data = data;
 	}
-	
+
 	public String getName() {
 		return name;
 	}
@@ -227,14 +266,14 @@ public class Users {
 		this.data = data;
 	}
 
-	
 
-	
 
-	
-	
-	
-	
+
+
+
+
+
+
 	/*
 	 * 
 	 * 
@@ -242,15 +281,15 @@ public class Users {
 	 * 
 	 * 
 	 */
-	
+
 	// set Node info
 	public void setCurrentNode(Node n) {
 		setNodeConnectionIndex( n.getIndex() );
 		setNodeConnectionHostName( n.getSocketHostName() );
 		setNodeConnectionPort( n.getSocketPort() );
-		
+
 	}
-	
+
 	// Private and Public Key
 	public void generateRSAKkeyPair() 
 	{
@@ -265,91 +304,91 @@ public class Users {
 
 		keyPairGenerator.initialize( 2048, secureRandom);
 		KeyPair key = keyPairGenerator.generateKeyPair();
-		
-		
+
+
 		this.publicKey = key.getPublic();
 		this.privateKey = key.getPrivate();
-		
-		
+
+
 		System.out.println("\n\n----------KEYS CREATION END----------" + "\n" + 
 				"Private key: " + key.getPrivate() + "\n" + 
 				"Public key: " + key.getPublic() + "\n" + 
 				"----------KEYS CREATION START----------\n\n" );
 	}
-	
+
 	// Send transaction
 	// TODO: When error try to resends it
 	public JSONObject sendTransaction( Transaction t, String nodeHostname, int nodePort, int nodeIndex ) 
 	{
-		
+
 		String returnStr = "";
 		t.setNodeDeestination(nodeHostname, nodePort, nodeIndex);
-		
+
 		JSONObject jObj = new JSONObject();
 		jObj.put("ActionToPerform", "postTransactionInPool");
 		jObj.put("Transaction", t.toJObj());
 		Socket s = null;
-		
+
 		try {
 			s = new Socket(nodeHostname, nodePort);
 
-			
-		    try (
-		    		PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-		    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-		    ) {
-		    	out.println( jObj.toString() );
-		    	returnStr = in.readLine();
-		    }
-		    
 
-		
+			try (
+					PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+					BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+					) {
+				out.println( jObj.toString() );
+				returnStr = in.readLine();
+			}
+
+
+
 		} catch (IOException e) {
 			returnStr = "Error in send Transaction";
 			e.printStackTrace();
 		}
-		
-	    
-		
+
+
+
 		try { s.close(); } 
 		catch (Exception e) {}
 
-		
+
 		return new JSONObject( returnStr );
 	}
-	
+
 	public String getTransactionByIndex( String transactionHash, String guarantorHostname, int guarantorPort  )
 	{
-		
+
 		String transactionData = "";
-		
+
 		JSONObject jsonObject = new JSONObject();
-		
+
 		jsonObject.put("ActionToPerform", "readTransaction");
 		jsonObject.put("BlockIndex", transactionHash);
-		
 
-		
-	    try (
-	    		Socket s = new Socket(guarantorHostname, guarantorPort);
-	    		
-	            PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-	    		BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-	    ) {
 
-	    	out.println( jsonObject.toString() );
-	    	transactionData = in.readLine();
-	    	
-	    } catch (IOException e) {
+
+		try (
+				Socket s = new Socket(guarantorHostname, guarantorPort);
+
+				PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+				BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+				) {
+
+			out.println( jsonObject.toString() );
+			transactionData = in.readLine();
+
+		} catch (IOException e) {
 			e.printStackTrace();
 			transactionData = "Error";
 		}
-	    
-		
-		
+
+
+
 		return transactionData;
 	}
-	
+
 	/*
 	 * 
 	 * 
@@ -357,12 +396,79 @@ public class Users {
 	 * 
 	 * 
 	 */
-	
-	
-	
-	
-	
-	
 
-	
+
+
+
+
+	/*
+	 * 
+	 * 	File controller
+	 * 
+	 */
+	public void loadUsersFromFile() throws FileNotFoundException, IOException, ParseException {
+
+		JSONParser parser = new JSONParser();
+		Object obj = parser.parse(new FileReader( this.pathFile ));
+
+		JSONObject jsonObject = (JSONObject) obj;
+
+		this.index = jsonObject.getString("index");
+		this.name = jsonObject.getString("name");
+		this.surname = jsonObject.getString("surname");
+
+		this.privateKey = (PrivateKey) jsonObject.get("privateKey");
+		this.publicKey = (PublicKey) jsonObject.get("publicKey");
+		this.balance = jsonObject.getLong("balance");
+
+		// TODO
+		//			this.data = jsonObject.get("name");
+
+		this.permissions = jsonObject.getInt("permissions");
+
+		this.nodeConnectionIndex = jsonObject.getInt("nodeConnectionIndex");
+		this.nodeConnectionHostName = jsonObject.getString("nodeConnectionHostName");
+		this.nodeConnectionPort = jsonObject.getInt("nodeConnectionPort");
+
+		this.CompanyName = jsonObject.getString("CompanyName");
+		this.CompanyIndex = jsonObject.getInt("CompanyIndex");
+		this.CompanyNodeIndex = jsonObject.getInt("CompanyNodeIndex");
+
+
+	}
+
+	public void saveUsersToFile() throws IOException {
+
+		JSONObject jsonObject = new JSONObject();
+
+
+		jsonObject.put("index", this.index );
+		jsonObject.put("name", this.name );
+		jsonObject.put("surname", this.surname );
+
+		jsonObject.put("privateKey", this.privateKey );
+		jsonObject.put("publicKey", this.publicKey );
+		jsonObject.put("balance", this.balance );
+
+		// TODO
+		//			this.data = jsonObject.get("name");
+
+		jsonObject.put("permissions", this.permissions );
+
+		jsonObject.put("nodeConnectionIndex", this.nodeConnectionIndex );
+		jsonObject.put("nodeConnectionHostName", this.nodeConnectionHostName );
+		jsonObject.put("nodeConnectionPort", this.nodeConnectionPort );
+
+		jsonObject.put("CompanyName", this.CompanyName );
+		jsonObject.put("CompanyIndex", this.CompanyIndex );
+		jsonObject.put("CompanyNodeIndex", this.CompanyNodeIndex );
+
+
+
+		FileWriter file = new FileWriter( this.pathFile );
+		file.write( jsonObject.toString() );
+		file.close();
+	}
+
+
 }
