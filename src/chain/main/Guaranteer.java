@@ -366,7 +366,6 @@ public class Guaranteer {
 
 					// aDD NODE IN the node LIST
 					setNodeToList(jObj);
-					System.out.println("// TODO: Non funziona ... ");
 					setUserToList(jObj);
 
 
