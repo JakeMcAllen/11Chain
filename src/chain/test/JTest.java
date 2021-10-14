@@ -1,14 +1,12 @@
 package chain.test;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+//import java.io.IOException;
 
 import org.json.JSONObject;
-import org.json.simple.parser.ParseException;
 import org.junit.Test;
 
 import chain.component.Transaction;
+import chain.extraClasses.RandomString;
 import chain.main.Guaranteer;
 import chain.main.Node;
 import chain.main.Users;
@@ -54,7 +52,7 @@ public class JTest {
 		
 		Users u = new Users();
 		try { u.loadUsersFromFile(); } 
-		catch (IOException | ParseException e1) { e1.printStackTrace(); }
+		catch (Exception e1) { e1.printStackTrace(); }
 		System.out.println(u.toString() );
 		
 		
@@ -69,33 +67,32 @@ public class JTest {
 
 
 
-//		// TESTS 
-//		for (int i=0; i<30; i++) {
-//
-//			JSONObject testTras = new JSONObject();
-//			testTras.put("datas", "testInput di testo arbitrario");
-//			testTras.put("index", i);
-//
-//			Transaction t = new Transaction(u, testTras);
-//			//			System.out.println("Transaction: " + t);
-//
-//
-//
-//			// Send some data to node and read return transaction
-//			JSONObject responseTransaction = u.sendTransaction( t, hostNode, portNode, nodeIndex );	
-//			System.err.println("BlockIndex: " +  responseTransaction.get("BlockIndex") + "\tIndex: " + i );
-//
-//
-//			try { Thread.sleep(100); } catch (InterruptedException e) { e.printStackTrace(); }
-//		}
-//
-//		try 
-//		{ 
-//			String getDatas = u.getTransactionByIndex("1x5a" ,hostNode, portNode);
-//
-//			System.err.println("\n\nOutputDatas: " + getDatas );
-//		} 
-//		catch (Exception e) { e.printStackTrace(); }
+		// TESTS 
+		for (int i=0; i<30; i++) {
+
+			JSONObject testTras = new JSONObject();
+			testTras.put("datas", "testInput di testo arbitrario");
+			testTras.put("index", i);
+
+			Transaction t = new Transaction(u, testTras);
+
+
+
+			// Send some data to node and read return transaction
+			JSONObject responseTransaction = u.sendTransaction( t, hostNode, portNode, nodeIndex );	
+			System.err.println("BlockIndex: " +  responseTransaction.get("BlockIndex") + "\tIndex: " + i );
+
+
+			try { Thread.sleep(100); } catch (InterruptedException e) { e.printStackTrace(); }
+		}
+
+		try 
+		{ 
+			String getDatas = u.getTransactionByIndex("1x5a" ,hostNode, portNode);
+
+			System.err.println("\n\nOutputDatas: " + getDatas );
+		} 
+		catch (Exception e) { e.printStackTrace(); }
 
 
 
@@ -103,8 +100,18 @@ public class JTest {
 		guaranteer.setListenerIsActive( false );
 		node.setListenerIsActive( false );
 		System.err.println("\n\nAll entities are closed");
-
+		
 	}
+	
+	
+//	@Test
+//	public void randomTest() {
+//		
+//		for (int i=0; i< 10; i++)
+//			System.out.println( RandomString.newString() );
+//        
+//	}
 
+    
 
 }

@@ -11,8 +11,9 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Scanner;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
@@ -20,6 +21,7 @@ import javax.xml.bind.DatatypeConverter;
 import org.json.JSONObject;
 
 import chain.component.Block;
+import chain.component.info.UsersInfo;
 
 
 
@@ -74,6 +76,7 @@ public class Node {
 	 */
 	// lists
 	private HashMap<String, Block> MileStone;
+	private List<UsersInfo> userDataList;
 
 	// first and last block of chain
 	private Block Head;
@@ -146,20 +149,21 @@ public class Node {
 		// call to standard constructor
 		// Set Keys
 		KeyPair keypair = null;
-		try {
-			keypair = generateRSAKkeyPair();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		try { keypair = generateRSAKkeyPair(); } 
+		catch (Exception e) { e.printStackTrace(); }
 
 		this.privateKey = keypair.getPrivate();
 		this.publicKey = keypair.getPublic();
 
 
+		// list of all users of the chain to this
+		userDataList = new ArrayList<UsersInfo> ();
+
 
 		// Set guaranteer host and ports and socket hostName and port
 		this.guarantorHostName = guarenteerHostName;
 		this.guarantorPort = guaranteerPort;
+
 
 		this.socketHostName = socketHostName;
 		this.socketPort = localPort;
@@ -306,6 +310,7 @@ public class Node {
 	private class ResponseThread extends Thread {
 
 		private Socket socket = null;
+		@SuppressWarnings("unused")
 		private Object sincronizer = null;
 		private Node node;
 
@@ -328,52 +333,54 @@ public class Node {
 					) {
 
 				// Response string
-				String returnString = "";
+				JSONObject returnString = new JSONObject();
 				JSONObject jObj = new JSONObject( in.readLine() );
 
 
 
-				switch ( jObj.getString("ActionToPerform") ) {
-
-				case "postTransactionInPool":
-
-					JSONObject nodeInfo = new JSONObject();
-					nodeInfo.put("HostName", this.node.socketHostName);
-					nodeInfo.put("Port", this.node.socketPort);
-					nodeInfo.put("nodeIndex", this.node.index);
+				if ( controllUser( jObj ) ) {
+					returnString.clear();
 
 
-					jObj.put("NodeInfo", nodeInfo);
+					switch ( jObj.getString("ActionToPerform") ) {
+
+					// For Users
+					case "postTransactionInPool":
+
+						returnString = postTransaction( jObj );
+						break;
+
+					case "readTransaction":
+
+						returnString = getTransactionFromObject( jObj );
+						break;
 
 
-					returnString = postTransaction( jObj.toString() );
-					break;
+						// For Guaranteer
+					case "setNewBlock":
 
-				case "readTransaction":
+						setNewBlock( jObj );
+						break;
 
-					returnString = getTransactionFromObject( jObj );
-					break;
+					case "setNewBlockToMilestone":
 
-				case "setNewBlock":
+						Block b = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
+						this.node.MileStone.put(b.getIndex(), b );
+						break;
 
-					setNewBlock( jObj );
-					break;
 
-				case "setNewBlockToMilestone":
+					default:
+						returnString.put("Error", "Node is not able to perform action: " + jObj.getString("ActionToPerform"));
+					}
 
-					Block b = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
-					this.node.MileStone.put(b.getIndex(), b );
-					break;
-
-				default:
-					throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 				}
 
-				
+
 				out.println(returnString);
 
 			} catch (Exception e) {
-				System.err.println("Error in 'ResponseThread Node': " + e.getMessage() );		
+				System.err.println("Error in 'ResponseThread Node': " + e.getMessage() );
+				e.printStackTrace();
 			}
 		}
 
@@ -393,16 +400,97 @@ public class Node {
 	 ** 
 	 */
 
-	private String postTransaction( String input ) {
+	/**
+	 * 	
+	 * 	Send a transaction to pool of guaranteer
+	 * 	Node wait a certain of time or over size certain size to send new Block.
+	 * 
+	 * 	Create and send to guaranteer the new block and clear pool
+	 * 	If pool is not empty send data to guaranteer.
+	 * 	At the and clear pool.
+	 * 
+	 * @param jObj input transaction
+	 * @return index of transaction and block index
+	 */
+	private JSONObject postTransaction( JSONObject input ) {
 
-		String returnString = "";
+		JSONObject nodeInfo = new JSONObject();
+		nodeInfo.put("HostName", this.socketHostName);
+		nodeInfo.put("Port", this.socketPort);
+		nodeInfo.put("nodeIndex", this.index);
 
-		// Get response from variables
-		returnString = addTTPool(input);
-		return returnString;
+
+		input.put("NodeInfo", nodeInfo);
+
+		return sendToGuaranteer( input );
 	}
 
-	private String getTransactionFromObject( JSONObject jsonObject ) {
+	/**
+	 * 	Permit to check that users is able to perform actions.
+	 * 	If users is new, this method, permit to register it 
+	 * 
+	 * 	TODO: 
+	 * 		1) Fare dei controlli seri
+	 * 
+	 * 
+	 * @param jObj input transaction
+	 * @return -1 if users is not able to perform action, 1 otherwise 
+	 */
+	public boolean controllUser(JSONObject jo) {
+
+		try { if ( jo.getString("user").equals("guaranteer") ) return true; } 
+		catch (Exception e) {}
+
+
+		try { 
+
+			JSONObject users = jo.getJSONObject("Transaction").getJSONObject("user");
+
+			if ( 
+					this.userDataList
+					.stream()
+					.filter(e -> e.getIndex().equals( users.getString("index") ) )
+					.count() == 0
+					) {
+				// If users is not present in node list sent it to guaranteer for to be checked
+				JSONObject input = new JSONObject();
+				input.put("ActionToPerform", "checkUser");
+				input.put("user", users);
+
+				JSONObject response = sendToGuaranteer( input );
+
+				// Then save it on list			
+				if ( response.getInt("UsersStatus") == 1 ) 
+				{
+					this.userDataList.add( UsersInfo.generateFromJSON( users ) );	
+				} 
+				else if ( response.getInt("UsersStatus") == -1 ) { return false; }
+
+				return true;
+
+			} else {
+				// If user is present in the list check it keyString
+				// TODO: modify it's private data on list
+
+				return true;
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			
+			System.out.println("Jo: " + jo);
+			
+			return false;
+		}
+
+	}
+
+
+
+
+
+
+	private JSONObject getTransactionFromObject( JSONObject jsonObject ) {
 
 		int transactionNumber = Integer.parseInt( jsonObject.getString("BlockIndex").split("x")[0] );
 		String blockIndex = jsonObject.getString("BlockIndex").split("x")[1];
@@ -426,18 +514,24 @@ public class Node {
 			// cerca blocco
 			if ( jObj.getString("index").equals(blockIndex) )
 			{
-
-				String datas = Block.taketransactionFromData(jObj, transactionNumber);				
+				JSONObject datas = new JSONObject( Block.taketransactionFromData(jObj, transactionNumber) );				
 				return datas;
 			}
 
-		} while ( true );
+		} while ( nextB.hasNextBlock() );
+
+
+		JSONObject errJSON = new JSONObject();
+		errJSON.put("Error", "Transaction not fund");
+
+		return errJSON;
 
 	}
 
 	private void setNewBlock( JSONObject jObj ) 
 	{
 		Block nBlock = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
+
 
 		try {
 			if ( Head == null) Head = Tail = nBlock;
@@ -452,15 +546,6 @@ public class Node {
 
 	}
 
-	private void setNewSCBlock( JSONObject jObj ) { 
-
-		Block nBlock = Block.generateBlockFromJSON( (JSONObject) jObj.get("block") );
-
-		Block parentBlock = MileStone.get( nBlock.getParentBlockHash() );
-
-		parentBlock.setNextBlock( parentBlock );
-
-	}
 
 	/**
 	 **
@@ -498,55 +583,6 @@ public class Node {
 
 
 
-
-	/*
-	 * 
-	 * 		POOL
-	 * 
-	 * 
-	 * 	Node wait a certain of time or over size certain size to send new Block.
-	 * 
-	 * 	Create and send to guaranteer the new block and clear pool
-	 * 	If pool is not empty send data to guaranteer.
-	 * 	At the and clear pool.
-	 * 
-	 * 
-	 * 	Method list:
-	 * 		"addTTPool"			Method for send to guaranteer a new transaction
-	 * 
-	 * 
-	 */
-	private String addTTPool(String input) 
-	{
-		// BlockNumberCounter + "x" + Hash();
-		String transactionIndex = "";
-
-		try {
-			Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
-
-			try (
-					PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-					BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-					) {
-
-				// READ
-				out.println( input );
-
-				transactionIndex = in.readLine();
-
-
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			s.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}		
-
-		return transactionIndex;
-	}
 
 
 
@@ -630,6 +666,32 @@ public class Node {
 
 
 
+
+
+
+
+	private JSONObject sendToGuaranteer( JSONObject input ) {
+
+		JSONObject response = new JSONObject();
+
+		try (
+				Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
+				PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+				BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
+				) {
+
+			// READ
+			out.println( input.toString() );
+
+			response = new JSONObject( in.readLine() );
+
+
+		} catch (Exception e) {
+			response.put("Error to send action to guaranteer", e.getCause() );
+		}
+
+		return response;
+	}
 
 
 

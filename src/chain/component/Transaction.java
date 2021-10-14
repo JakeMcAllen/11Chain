@@ -8,6 +8,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
 
+import chain.extraClasses.zipKey;
 import chain.main.Users;
 
 public class Transaction {
@@ -42,7 +43,7 @@ public class Transaction {
 		this.user.put("name", user.getName() );
 		this.user.put("surname", user.getSurname() );
 		this.user.put("balance", user.getBalance() );
-		this.user.put("publicKey", user.getPublicKey() );
+		this.user.put("publicKey", zipKey.zipPublicKey( user.getPublicKey() ) );
 		this.user.put("data", user.getData() );
 		this.user.put("permission", user.getPermissions() );
 		this.user.put("CompanyName", user.getCompanyName() );
@@ -71,6 +72,7 @@ public class Transaction {
 		
 	}
 	  
+	
 	
 	
 	
@@ -120,6 +122,33 @@ public class Transaction {
 		return DatatypeConverter.printHexBinary( getByte() );
 	}
 	
+	public JSONObject getTransactionData() {
+		return transactionData;
+	}
+
+	public void setTransactionData(JSONObject transactionData) {
+		this.transactionData = transactionData;
+	}
+
+	public JSONObject getUser() {
+		return user;
+	}
+
+	public void setUser(JSONObject user) {
+		this.user = user;
+	}
+
+	public JSONObject getNode() {
+		return node;
+	}
+
+	public void setNode(JSONObject node) {
+		this.node = node;
+	}
+
+
+	
+	
 	
 	
 	
@@ -143,7 +172,6 @@ public class Transaction {
 
 	// get transaction object and create Transaction
 	public static Transaction ObjFromJSON(JSONObject jObj) {
-		
 		
 		JSONObject dataJ = jObj.getJSONObject("transactionData");
 		JSONObject userJ = jObj.getJSONObject("user");
@@ -177,7 +205,7 @@ public class Transaction {
 
 	@Override
 	public String toString() {
-		return "Transaction [transactionData=" + transactionData + ", userD=" + user + ", node=" + node + "]";
+		return "Transaction [transactionData=" + transactionData + ", user=" + user + ", node=" + node + "]";
 	}
 
 }

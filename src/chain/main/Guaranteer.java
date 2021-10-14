@@ -230,7 +230,7 @@ public class Guaranteer {
 
 
 				// Send new block to all Node
-				this.guaranteer.sendToAllNodoJSON("setNewBlock", b.toJSON());
+				this.guaranteer.sendToAllNodeJSON("setNewBlock", b.toJSON());
 
 			}
 
@@ -360,13 +360,13 @@ public class Guaranteer {
 				try (
 						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 						BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-						) {
+				) {
 
 					jObj = new JSONObject(in.readLine());
 
 					// aDD NODE IN the node LIST
 					setNodeToList(jObj);
-					setUserToList(jObj);
+//					setUserToList(jObj);
 
 
 
@@ -374,8 +374,8 @@ public class Guaranteer {
 					switch ( jObj.getString("ActionToPerform") ) {
 
 					case "postTransactionInPool":
-						JSONObject trOb = (JSONObject) jObj.get("Transaction");
-						returnObj.put("BlockIndex", this.guaranteer.addTTPool( new Transaction( trOb ) ) );
+
+						returnObj.put("BlockIndex", this.guaranteer.addTTPool( new Transaction( jObj.getJSONObject("Transaction") ) ) );
 						break;
 
 					case "newNode": 
@@ -387,18 +387,25 @@ public class Guaranteer {
 					case "LoadChain":
 						returnObj.put("ResponseString", loadChain(out, Head) );
 						break;
+						
+					
+					case "checkUser":
+						returnObj.put("UsersStatus", checkUser( jObj ) );
+						break;
 
 					default:
 						returnObj.put("ResponseString", "Inaspected error. Stop and restart application." );
 						throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 					}
 
-
+					returnObj.put("user", "guaranteer");
+					
+					
 					// WRITE return message
 					out.println( returnObj.toString() );
 
 				}
-
+				
 
 				// close socket and stream
 				socket.close();
@@ -472,7 +479,6 @@ public class Guaranteer {
 				ui.setSurname( userInfo.getString("surname") );
 				ui.setData( userInfo.get("data").toString().getBytes() );
 				
-				System.out.print("UI: " + ui);
 				userDataList.add( ui );
 			}	
 		}
@@ -513,14 +519,27 @@ public class Guaranteer {
 			// Set new milestone
 			this.guaranteer.setNewMileStone( b );
 
-
 			// Send new block at milestone of all Node
-			this.guaranteer.sendToAllNodoJSON( "setNewBlockToMilestone", b.toJSON() );
+			this.guaranteer.sendToAllNodeJSON( "setNewBlockToMilestone", b.toJSON() );
 
 		}
 
 	}
 
+	// TODO: Fare dei controlli seri su gli utenti
+	private int checkUser(JSONObject jO) {
+		JSONObject user = jO.getJSONObject("user");
+		
+		try {
+			this.userDataList.add( UsersInfo.generateFromJSON( user ) );
+		} catch (Exception e) {
+			e.printStackTrace();
+			return -1;
+		}
+		
+		return 1;
+	}
+	
 	/* 
 	 * 
 	 * 	END ACTION ON THE CHAIN
@@ -547,29 +566,24 @@ public class Guaranteer {
 
 		JSONObject jo = jObj.getJSONObject("Node");
 
-		if ( nodeList
-				.stream()
-				.filter( 
-						inf -> inf.getNodeIndex() == jo.getInt("Index")
-						)
-				.count() > 0 ) 
-		{
-			return "nodeAddFail";
-		}
+		if ( nodeList.stream()
+				.filter( inf -> inf.getNodeIndex() == jo.getInt("Index"))
+				.count() > 0 
+		) { return "nodeAddFail"; }
 
 		nodeList.add( 
 				new NodeInfo(
 						jo.getInt("Index"),
 						jo.getString("HostName"),
 						jo.getInt("Port")
-						) );
+				) );
 
 
 		return "nodeAddSuccess";
 	}
 
 
-	private void sendToAllNodoJSON( String message, JSONObject obj ) {
+	private void sendToAllNodeJSON( String message, JSONObject obj ) {
 		nodeList.stream().forEach( e -> {
 
 			try {
@@ -579,12 +593,14 @@ public class Guaranteer {
 
 						PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 						BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-						) {
+				) {
 
 					JSONObject jObj = new JSONObject();
 					jObj.put("ActionToPerform", message);
 					jObj.put("NewBlock", obj );
+					jObj.put("user", "guaranteer");
 
+					
 					out.println( jObj.toString() );
 
 				}

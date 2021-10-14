@@ -2,37 +2,23 @@ package chain.main;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
-import java.util.Base64;
 
 import org.json.JSONObject;
 import org.json.simple.JSONArray;
@@ -40,12 +26,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import chain.component.Transaction;
+import chain.extraClasses.zipKey;
 
 public class Users {
 
 	private String index;
-	private String name;
-	private String surname;
+	private String name = "";
+	private String surname = "";
 
 	// Keys
 	private PrivateKey privateKey = null;
@@ -344,6 +331,9 @@ public class Users {
 
 		jsonObject.put("ActionToPerform", "readTransaction");
 		jsonObject.put("BlockIndex", transactionHash);
+		jsonObject.put("Transaction", new Transaction(this, new JSONObject() ).toJObj());
+
+
 
 		try (Socket s = new Socket(guarantorHostname, guarantorPort);
 
@@ -372,6 +362,10 @@ public class Users {
 
 
 
+	
+	
+
+
 
 	/*
 	 * 
@@ -392,40 +386,9 @@ public class Users {
 			this.surname = (String) jsonObject.get("surname");
 
 
-			
-			
-			
-
 			// Public and private Key
-			KeyFactory keyFactoryPtK = KeyFactory.getInstance("RSA");
-			
-			JSONArray privateJSA = (JSONArray) jsonObject.get("privateKey");			
-			byte[] bytesPtK = new byte[privateJSA.size()];
-			
-	        for (int i = 0; i < privateJSA.size(); i++) 
-	        {
-	        	bytesPtK[i] = ( (Long) privateJSA.get(i) ).byteValue();
-	        }
-			PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec( bytesPtK );
-			this.privateKey = keyFactoryPtK.generatePrivate( privateKeySpec );
-
-			
-			KeyFactory keyFactoryPcK = KeyFactory.getInstance("RSA");
-
-			JSONArray publicJSA = (JSONArray) jsonObject.get("publicKey");			
-			byte[] bytesPcK = new byte[publicJSA.size()];
-			
-	        for (int i = 0; i < publicJSA.size(); i++) 
-	        {
-	        	bytesPcK[i] = ( (Long) publicJSA.get(i) ).byteValue();
-	        }
-	        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec( bytesPcK );
-			this.publicKey = keyFactoryPcK.generatePublic( publicKeySpec );
-
-			
-			
-			
-			
+			this.privateKey = zipKey.deZipPrivateKey( (JSONArray) jsonObject.get("privateKey") );
+			this.publicKey = zipKey.deZipPublicKey( (JSONArray) jsonObject.get("publicKey") );
 			
 			this.balance = (long) jsonObject.get("balance");
 			
@@ -448,27 +411,17 @@ public class Users {
 		}
 	}
 	
-	
-	
-
-
 	public void saveUsersToFile() throws IOException {
 
-
-		PKCS8EncodedKeySpec pkcs8EncodedKeySpecPtK = new PKCS8EncodedKeySpec( this.privateKey.getEncoded() );
-		X509EncodedKeySpec pkcs8EncodedKeySpecPcK = new X509EncodedKeySpec( this.publicKey.getEncoded() );
-
-		
-		
-		
 		JSONObject jsonObject = new JSONObject();
 
+		
 		jsonObject.put("index", this.index);
 		jsonObject.put("name", this.name);
 		jsonObject.put("surname", this.surname);
 
-		jsonObject.put("privateKey", pkcs8EncodedKeySpecPtK.getEncoded() );
-		jsonObject.put("publicKey", pkcs8EncodedKeySpecPcK.getEncoded() );
+		jsonObject.put("privateKey", zipKey.zipPrivateKey( this.privateKey ) );
+		jsonObject.put("publicKey", zipKey.zipPublicKey( this.publicKey ) );
 		jsonObject.put("balance", this.balance);
 
 		// TODO
@@ -489,11 +442,18 @@ public class Users {
 		file.close();
 	}
 
+	
+
+
+	
+	
 
 
 
 
 
+	
+	
 
 	@Override
 	public String toString() {

@@ -3,6 +3,11 @@ package chain.component.info;
 import java.security.PublicKey;
 import java.util.Arrays;
 
+import org.json.JSONObject;
+
+import chain.extraClasses.RandomString;
+import chain.extraClasses.zipKey;
+
 /**
  * 	Contain all info abot a user
  * 
@@ -46,6 +51,9 @@ public class UsersInfo {
 	private int CompanyNodeIndex;
 	
 	
+	// Una stringa di caratteri a caso che vengono usati dal garante ( e che può leggere solo lui ) per garantire la legittimità dell'utente 
+	private String securityKey;
+	
 	
 	
 
@@ -54,7 +62,7 @@ public class UsersInfo {
 
 	public UsersInfo(String index, String name, PublicKey publicKey, long balance,
 			int permissions, byte[] data) {
-		super();
+		this();
 		this.index = index;
 		this.name = name;
 		this.publicKey = publicKey;
@@ -66,7 +74,7 @@ public class UsersInfo {
 	public UsersInfo(String index, String name, String surname, long balance, PublicKey publicKey, byte[] data,
 			int permissions, int nodeConnectionIndex, String nodeConnectionHostName, int nodeConnectionPort,
 			String companyName, int companyIndex, int companyNodeIndex) {
-		super();
+		this();
 		this.index = index;
 		this.name = name;
 		this.surname = surname;
@@ -195,15 +203,59 @@ public class UsersInfo {
 	}
 
 	
+	/*
+	 * 
+	 * 	Generate String of control for users
+	 * 
+	 */
+	public String getSecurityKey() {
+		if (this.securityKey == null ) 
+			this.securityKey = RandomString.newString();
+		
+		return this.securityKey;	
+	}
+	
+	public void setSecurityKey(String keyStr) {
+		this.securityKey = keyStr;
+	}
 	
 	
+	
+	
+	
+	
+	public static UsersInfo generateFromJSON (JSONObject jo) {
+		
+		UsersInfo ui = new UsersInfo();
+		
+		
+		ui.setIndex( jo.getString("index") );
+		ui.setName( jo.getString("name") );
+		ui.setSurname( jo.getString("surname") );
+		ui.setBalance( jo.getLong("balance") );
+		ui.setPublicKey( zipKey.deZipPublicKey( jo.getJSONArray("publicKey") ) );
+		ui.setPermissions( jo.getInt("permission") );
+		
+		ui.setCompanyName( jo.getString("CompanyName") );
+		ui.setCompanyIndex( jo.getInt("CompanyIndex") );
+		ui.setCompanyNodeIndex( jo.getInt("CompanyNodeIndex") );
+		
+		return ui;
+	}
+	
+	
+	
+	
+	
+	
+
 	@Override
 	public String toString() {
 		return "UsersInfo [index=" + index + ", name=" + name + ", surname=" + surname + ", balance=" + balance
 				+ ", publicKey=" + publicKey + ", data=" + Arrays.toString(data) + ", permissions=" + permissions
 				+ ", nodeConnectionIndex=" + nodeConnectionIndex + ", nodeConnectionHostName=" + nodeConnectionHostName
 				+ ", nodeConnectionPort=" + nodeConnectionPort + ", CompanyName=" + CompanyName + ", CompanyIndex="
-				+ CompanyIndex + ", CompanyNodeIndex=" + CompanyNodeIndex + "]";
+				+ CompanyIndex + ", CompanyNodeIndex=" + CompanyNodeIndex + ", securityKey=" + securityKey + "]";
 	}
 	
 }
