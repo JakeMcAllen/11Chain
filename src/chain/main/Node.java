@@ -174,6 +174,7 @@ public class Node {
 		// Start listener module
 		(new Node.getDataThread( this.socketPort, this )).start();
 
+		
 		// Load chain from guaranteer
 		loadChain();
 
@@ -231,7 +232,9 @@ public class Node {
 				out.println( JObj.toString() );
 
 				Head = Tail = AddNextBlock( in );
-
+				
+				MileStone = new HashMap<String, Block>();
+				MileStone.put(Head.getIndex(), Head);
 			}
 
 			s.close();
@@ -364,8 +367,7 @@ public class Node {
 
 					case "setNewBlockToMilestone":
 
-						Block b = Block.generateBlockFromJSON( jObj.getJSONObject("NewBlock") );
-						this.node.MileStone.put(b.getIndex(), b );
+						setMilestone(jObj);
 						break;
 
 
@@ -495,19 +497,11 @@ public class Node {
 		int transactionNumber = Integer.parseInt( jsonObject.getString("BlockIndex").split("x")[0] );
 		String blockIndex = jsonObject.getString("BlockIndex").split("x")[1];
 
-		Block nb = null;
-		do {
-			nb = (nb == null) ? Head : nb.getNextBlock();			
-		} while ( nb.hasNextBlock() );
-
-
-
-
-
+		String pt = Block.getNearBlock(MileStone, jsonObject.getString("BlockIndex"));
 		Block nextB = null;
 		do {
 
-			nextB = (nextB == null) ? Head : nextB.getNextBlock();
+			nextB = (nextB == null) ? MileStone.get(pt) : nextB.getNextBlock();
 			JSONObject jObj = nextB.toJSON();
 
 
@@ -534,8 +528,13 @@ public class Node {
 
 
 		try {
-			if ( Head == null) Head = Tail = nBlock;
-			else {
+			if ( Head == null) 
+			{
+				Head = Tail = nBlock;
+				MileStone.put(nBlock.getIndex(), nBlock);
+			}
+			else 
+			{
 				Tail.setNextBlock( nBlock );
 				Tail.setHasNext( true );
 				Tail = nBlock;
@@ -546,7 +545,25 @@ public class Node {
 
 	}
 
+	private void setMilestone(JSONObject jo) {
+		String b = Block.generateBlockFromJSON( jo.getJSONObject("NewBlock") ).getIndex();
+		
+		
+		Block nextB = null;
+		do {
 
+			nextB  = (nextB == null) ? Head : nextB.getNextBlock();
+			JSONObject jObj = nextB.toJSON();
+
+			if ( nextB.getIndex().equals(b) ) 
+			{
+				this.MileStone.put(nextB.getIndex(), nextB );
+			}
+
+		} while ( nextB.hasNextBlock() );
+		
+	}
+	
 	/**
 	 **
 	 ** 	END CHAIN ACTIONS

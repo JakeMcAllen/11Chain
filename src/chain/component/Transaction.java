@@ -182,13 +182,13 @@ public class Transaction {
 		return new Transaction(dataJ, userJ, nodeJ);
 	}
 
-	public void setNodeDeestination(String nodeHostName, int nodePort, int nodeIndex) {
+	public void setNodeDeestination(String nodeHostName, int nodePort, int nodeConnectionIndex) {
 		
 		String dateTime = LocalDateTime.now().format( DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss") );
 		
 		this.node.put("HostName", nodeHostName);
 		this.node.put("Port", nodePort);
-		this.node.put("Index", nodeIndex);
+		this.node.put("Index", nodeConnectionIndex);
 		this.node.put("dataSending", dateTime );
 		
 	}

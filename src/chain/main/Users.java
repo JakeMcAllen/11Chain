@@ -60,6 +60,8 @@ public class Users {
 	// path of file where are saved files
 	private String pathFile = "\\src\\chain\\files\\users.json";
 
+	
+	
 
 
 	public Users() {
@@ -144,7 +146,7 @@ public class Users {
 				e.printStackTrace();
 			}
 		} else {
-			loadUsersFromFile();
+			loadUsers();
 		}
 	}
 
@@ -288,68 +290,59 @@ public class Users {
 		System.out.println("\n\n----------KEYS CREATION END----------" + "\n" + "Private key: " + key.getPrivate()
 		+ "\n" + "Public key: " + key.getPublic() + "\n" + "----------KEYS CREATION START----------\n\n");
 	}
-
+	
+	
+	
+	/*
+	 * 
+	 * 	Users actions
+	 * 
+	 * 	List:
+	 * 			1) sendTransaction: 		Send a transaction to Node to be add at to pool
+	 * 			2) getTransactionByIndex:	Call for a transaction to Node 
+	 * 
+	 */
 	// Send transaction
 	// TODO: When error try to resends it
 	public JSONObject sendTransaction(Transaction t, String nodeHostname, int nodePort, int nodeIndex) {
 
-		String returnStr = "";
-		t.setNodeDeestination(nodeHostname, nodePort, nodeIndex);
-
+		this.nodeConnectionHostName = nodeHostname;
+		this.nodeConnectionPort = nodePort;
+		this.nodeConnectionIndex = nodeIndex;
+		
+		return this.sendTransaction( t );
+	}
+	
+	public JSONObject sendTransaction(Transaction t) {
 		JSONObject jObj = new JSONObject();
 		jObj.put("ActionToPerform", "postTransactionInPool");
+		
+		t.setNodeDeestination(this.nodeConnectionHostName, this.nodeConnectionPort, this.nodeConnectionIndex);
 		jObj.put("Transaction", t.toJObj());
-		Socket s = null;
 
-		try {
-			s = new Socket(nodeHostname, nodePort);
 
-			try (PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-					BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));) {
-				out.println(jObj.toString());
-				returnStr = in.readLine();
-			}
-
-		} catch (IOException e) {
-			returnStr = "Error in send Transaction";
-			e.printStackTrace();
-		}
-
-		try {
-			s.close();
-		} catch (Exception e) {
-		}
-
-		return new JSONObject(returnStr);
+		return sendToNode( jObj );
 	}
 
-	public String getTransactionByIndex(String transactionHash, String guarantorHostname, int guarantorPort) {
+	public JSONObject getTransactionByIndex(String transactionHash, String nodeHostname, int nodePort) {
 
-		String transactionData = "";
-
+		this.nodeConnectionHostName = nodeHostname;
+		this.nodeConnectionPort = nodePort;
+		
+		return this.getTransactionByIndex(transactionHash);
+	}
+	
+	public JSONObject getTransactionByIndex(String transactionHash) {
 		JSONObject jsonObject = new JSONObject();
 
 		jsonObject.put("ActionToPerform", "readTransaction");
 		jsonObject.put("BlockIndex", transactionHash);
 		jsonObject.put("Transaction", new Transaction(this, new JSONObject() ).toJObj());
 
-
-
-		try (Socket s = new Socket(guarantorHostname, guarantorPort);
-
-				PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-				BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));) {
-
-			out.println(jsonObject.toString());
-			transactionData = in.readLine();
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			transactionData = "Error";
-		}
-
-		return transactionData;
+		
+		return sendToNode( jsonObject );
 	}
+
 
 	/*
 	 * 
@@ -372,7 +365,7 @@ public class Users {
 	 * 	File controller
 	 * 
 	 */
-	public void loadUsersFromFile() throws FileNotFoundException, IOException, ParseException {
+	public void loadUsers() throws FileNotFoundException, IOException, ParseException {
 
 		try {
 			JSONParser parser = new JSONParser();
@@ -411,7 +404,7 @@ public class Users {
 		}
 	}
 	
-	public void saveUsersToFile() throws IOException {
+	public void saveUsers() throws IOException {
 
 		JSONObject jsonObject = new JSONObject();
 
@@ -446,6 +439,29 @@ public class Users {
 
 
 	
+	
+	
+	private JSONObject sendToNode (JSONObject jsonObject) {
+		
+		String transactionData = "";
+		
+		
+		try (
+				Socket s = new Socket(this.nodeConnectionHostName, this.nodeConnectionPort );
+				PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+				BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+		) {
+
+			out.println(jsonObject.toString());
+			transactionData = in.readLine();
+
+		} catch (IOException e) {
+//			e.printStackTrace();
+			transactionData = "Error";
+		}
+		
+		return new JSONObject( transactionData );
+	}
 	
 
 

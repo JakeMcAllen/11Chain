@@ -9,7 +9,9 @@ import java.security.PrivateKey;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -314,7 +316,7 @@ public class Block {
 			
 		} catch (Exception e) { e.printStackTrace(); }
 	
-		System.out.println("\nNew Block \n");
+//		System.out.println("\nNew Block \n");
 		return b;
 	}
 	
@@ -475,13 +477,41 @@ public class Block {
 	{
 		return Integer.parseInt( index.substring(0, 1) );
 	}
-
-
 	
 	public boolean blockIsFromMainChian() 
 	{
 		return index.length() == 2 ? true : false;
 	}
+	
+	
+	
+	
+	
+	
+	public static String getNearBlock(HashMap<String, Block> mileStone, String string) {
+		int refIndex = Integer.parseInt( string.split("x")[1].substring(0, 1) );
+		String lastKey = "1x0a";
+		
+		
+		for (Map.Entry<String, Block> val : mileStone.entrySet() ) {			
+			
+			String key = val.getKey();
+			int blockPrimaryIndex = Integer.parseInt( key.split("x")[1].substring(0, 1) );			
+			
+			if ( blockPrimaryIndex == refIndex ) return key;
+			if ( blockPrimaryIndex > refIndex ) return lastKey;
+			
+			lastKey = key;
+		}
+		
+		return lastKey;
+	}
+	
+	
+	
+	
+	
+	
 	
 	
 

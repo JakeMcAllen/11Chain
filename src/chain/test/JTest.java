@@ -46,12 +46,12 @@ public class JTest {
 //		Users u = new Users("1", 100, 5, null, "Utente", "Utnt");
 //		u.generateRSAKkeyPair();
 //		u.setCurrentNode( node );
-//		try { u.saveUsersToFile(); } 
+//		try { u.saveUsers(); } 
 //		catch (IOException e1) { e1.printStackTrace(); }
 		 
 		
 		Users u = new Users();
-		try { u.loadUsersFromFile(); } 
+		try { u.loadUsers(); } 
 		catch (Exception e1) { e1.printStackTrace(); }
 		System.out.println(u.toString() );
 		
@@ -79,20 +79,26 @@ public class JTest {
 
 
 			// Send some data to node and read return transaction
-			JSONObject responseTransaction = u.sendTransaction( t, hostNode, portNode, nodeIndex );	
+			JSONObject responseTransaction = u.sendTransaction( t );	
 			System.err.println("BlockIndex: " +  responseTransaction.get("BlockIndex") + "\tIndex: " + i );
 
 
 			try { Thread.sleep(100); } catch (InterruptedException e) { e.printStackTrace(); }
 		}
 
-		try 
-		{ 
-			String getDatas = u.getTransactionByIndex("1x5a" ,hostNode, portNode);
-
-			System.err.println("\n\nOutputDatas: " + getDatas );
-		} 
-		catch (Exception e) { e.printStackTrace(); }
+		// TODO: Casi particolari da trattare
+//		String transactionIndex = "8x5a"; 		// caso da trattare
+//		String transactionIndex = "1x0a"; 		// caso da trattare
+		String transactionIndex = "2x2a";
+		
+		try {
+			
+			System.err.println("\n\nOutputDatas for transaction '" 
+					+ transactionIndex + "': \n\t\t" 
+					+ u.getTransactionByIndex( transactionIndex ).getJSONObject("transactionData")
+				);
+			
+		} catch (Exception e) { e.printStackTrace(); }
 
 
 

@@ -76,8 +76,8 @@ public class Guaranteer {
 	 *  
 	 */
 	// TODO: Per ora è in numero di transazioni. Vai a modificare il controllo su "pool.size"
-	private final int blockMaxSize = 5;
-	private final int timeToSendBlock = 5;
+	private final int blockMaxSize = 500;
+	private final int timeToSendBlock = 20;
 
 	private boolean listenerIsActive = true;
 
@@ -118,6 +118,7 @@ public class Guaranteer {
 		// BlockZero sent hash and default data
 		Block blockZero = new Block();
 		blockZero.setIndex( "1x0a" );
+		blockZero.setData("BlockZero".getBytes());
 		this.currentBlockIndex = "1a";
 
 		this.Head = this.Tail = blockZero;
@@ -175,7 +176,7 @@ public class Guaranteer {
 
 		// creation of a new block
 		// TODO: control size of all transaction
-		if ( ( pool.size() > blockMaxSize || t == null ) && pool.size() != 0 ) 
+		if ( ( pollSize(pool) > blockMaxSize || t == null ) && pool.size() != 0 ) 
 		{
 			currentTransactionNumeber = 0;
 			creteNode.newBlock(pool, currentBlockIndex);
@@ -196,6 +197,17 @@ public class Guaranteer {
 		return transactionIndex;
 	}
 
+	private int pollSize(List<Transaction> poolList) {
+		
+		int poollWeight = 0;
+		
+		for ( Transaction t : poolList ) 
+		{			
+			poollWeight += t.getLenght();
+		}
+				
+		return poollWeight;
+	}
 
 	// sending procedure for send new block to guaranteer to be checked
 	private class createNode extends Thread 
@@ -214,11 +226,7 @@ public class Guaranteer {
 
 				Block b = new Block();
 				b.setIndex(currentBlockIndex);
-
 				b.importDataFromPool( pool );
-
-
-				// Generate "listSCDataConnected"  
 				b.setIndex(currentBlockIndex);
 
 
@@ -366,7 +374,7 @@ public class Guaranteer {
 
 					// aDD NODE IN the node LIST
 					setNodeToList(jObj);
-//					setUserToList(jObj);
+					setUserToList(jObj);
 
 
 
@@ -398,10 +406,10 @@ public class Guaranteer {
 						throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 					}
 
-					returnObj.put("user", "guaranteer");
 					
 					
 					// WRITE return message
+					returnObj.put("user", "guaranteer");
 					out.println( returnObj.toString() );
 
 				}
@@ -477,7 +485,7 @@ public class Guaranteer {
 				ui.setIndex( userInfo.getString("index") );
 				ui.setName( userInfo.getString("name") );
 				ui.setSurname( userInfo.getString("surname") );
-				ui.setData( userInfo.get("data").toString().getBytes() );
+//				ui.setData( userInfo.get("data").toString().getBytes() );
 				
 				userDataList.add( ui );
 			}	
@@ -632,6 +640,22 @@ public class Guaranteer {
 	private Block getLastBlockInserted() {
 		return this.lastInsertBlock;
 	}
+
+	public int getSocketPort() {
+		return socketPort;
+	}
+
+
+
+
+
+
+
+
+
+
+	
+	
 
 
 
