@@ -93,6 +93,8 @@ public class Block {
 	
 	
 	
+	
+	
 	public Block() {}	
 	
 	public Block(Block parentBlock, byte[] data) 
@@ -105,7 +107,6 @@ public class Block {
 			String parentNode, JSONObject listSCDataConnected, String parentHash, boolean hasNext, int numberOfSiblingBlock,
 			Block parentBlock, Block nextBlock, List<Block> siblingBlock) 
 	{
-		super();
 		this.hash = hash;
 		this.data = data;
 		this.index = index;
@@ -143,19 +144,20 @@ public class Block {
 		return new String( this.data );
 	}
 	
-	public void setData(byte[] data) {
-		ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+	public void setData(byte[] dt) {
 		
 		try {
 			if (this.data != null) { 
+				ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+				
 				arrayOutputStream.write( this.data );
 				arrayOutputStream.write( ",{".getBytes() );
-				arrayOutputStream.write( data );
+				arrayOutputStream.write( dt );
 				arrayOutputStream.write( "}".getBytes() );
 			
 				this.data = arrayOutputStream.toByteArray();
 			} else {
-				this.data = data;
+				this.data = dt;
 			}
 			
 		} catch (IOException e) {
@@ -493,10 +495,9 @@ public class Block {
 		String lastKey = "1x0a";
 		
 		
-		for (Map.Entry<String, Block> val : mileStone.entrySet() ) {			
-			
-			String key = val.getKey();
-			int blockPrimaryIndex = Integer.parseInt( key.split("x")[1].substring(0, 1) );			
+		for (Map.Entry<String, Block> val : mileStone.entrySet() ) {
+			String key = val.getKey();			
+			int blockPrimaryIndex = Integer.parseInt( key.substring(0, 1) );			
 			
 			if ( blockPrimaryIndex == refIndex ) return key;
 			if ( blockPrimaryIndex > refIndex ) return lastKey;
@@ -523,5 +524,47 @@ public class Block {
 				+ ", numberOfSiblingBlock=" + numberOfSiblingBlock + ", parentBlock=" + parentBlock + ", nextBlock="
 				+ nextBlock + ", siblingBlock=" + siblingBlock + "]";
 	}
+	
+
+	
+	
+	
+	public static String listGlobalVariablesForPersistance = "hash;data;index;status;timeData;size;gas;parentNode;listSCDataConnected;parentHash;hasNext;numberOfSiblingBlock";
+
+	public String toCSV( String DELIMITER ) {
+		return hash 					+ DELIMITER 
+				+ Arrays.toString(data) + DELIMITER
+				+ index 				+ DELIMITER
+				+ status 				+ DELIMITER 
+				+ timeData 				+ DELIMITER
+				+ size 					+ DELIMITER
+				+ gas 					+ DELIMITER 
+				+ parentNode 			+ DELIMITER
+				+ listSCDataConnected 	+ DELIMITER
+				+ parentHash 			+ DELIMITER 
+				+ hasNext 				+ DELIMITER
+				+ numberOfSiblingBlock;
+	}
+	
+	public static Block fromCSV(String[] tokens) {
+		
+		Block b = new Block();
+		
+		b.setHash( tokens[0] );
+		b.setData( converterJSONArrayToByteArray( new JSONArray( tokens[1] ) ) );
+		b.setIndex( tokens[2] );
+		b.setStatus( Boolean.parseBoolean( tokens[3] ) );
+		if ( !tokens[4].equals("null") ) b.setTimeData( LocalDateTime.parse( tokens[4] ) );
+		b.setSize( Integer.parseInt( tokens[5] ) );
+		b.setGas( Integer.parseInt( tokens[6] ) );
+		b.setParentNode( tokens[7] );
+		if ( !tokens[8].equals("null") ) b.setListSCDataConnected( new JSONObject( tokens[8] ) );
+		b.setParentHash( tokens[9] );
+		b.setHasNext( Boolean.parseBoolean( tokens[10] ) );
+		b.setNumberOfSiblingBlock( Integer.parseInt( tokens[11] ) );
+		
+		return b;
+	}
+	
 	
 }

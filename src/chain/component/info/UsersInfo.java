@@ -4,6 +4,7 @@ import java.security.PublicKey;
 import java.util.Arrays;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import chain.extraClasses.RandomString;
 import chain.extraClasses.zipKey;
@@ -14,7 +15,7 @@ import chain.extraClasses.zipKey;
  * @author giorg
  *
  */
-public class UsersInfo {
+public class UsersInfo implements infoClasses {
 
 	// worker info
 	private String index;
@@ -53,6 +54,12 @@ public class UsersInfo {
 	
 	// Una stringa di caratteri a caso che vengono usati dal garante ( e che può leggere solo lui ) per garantire la legittimità dell'utente 
 	private String securityKey;
+	
+	
+	
+	
+
+	
 	
 	
 	
@@ -249,6 +256,10 @@ public class UsersInfo {
 	
 	
 
+	
+
+	public static String listGlobalVariablesForPersistance = "index;name;surname;balance;publicKey;permissions;nodeConnectionIndex;nodeConnectionHostName;nodeConnectionPort;CompanyName;CompanyIndex;CompanyNodeIndex;securityKey";
+
 	@Override
 	public String toString() {
 		return "UsersInfo [index=" + index + ", name=" + name + ", surname=" + surname + ", balance=" + balance
@@ -257,5 +268,45 @@ public class UsersInfo {
 				+ ", nodeConnectionPort=" + nodeConnectionPort + ", CompanyName=" + CompanyName + ", CompanyIndex="
 				+ CompanyIndex + ", CompanyNodeIndex=" + CompanyNodeIndex + ", securityKey=" + securityKey + "]";
 	}
+
+	@Override
+	public String toCSV( String DELIMITER ) {		
+		return index		 							+ DELIMITER
+				+ name	 								+ DELIMITER
+				+ surname 								+ DELIMITER 
+				+ balance 								+ DELIMITER
+				+ zipKey.zipPublicKeyStr( publicKey )	+ DELIMITER
+				+ permissions 							+ DELIMITER
+				+ nodeConnectionIndex		 			+ DELIMITER
+				+ nodeConnectionHostName 				+ DELIMITER
+				+ nodeConnectionPort 					+ DELIMITER
+				+ CompanyName 							+ DELIMITER
+				+ CompanyIndex 							+ DELIMITER 
+				+ CompanyNodeIndex 						+ DELIMITER
+				+ securityKey;
+	}
+
+	// 13
+	public static UsersInfo fromCSV(String[] tokens) {
+		UsersInfo ui = new UsersInfo();
+		
+		ui.setIndex( tokens[0] );
+		ui.setName( tokens[1] );
+		ui.setSurname( tokens[2] );
+		ui.setBalance( Integer.parseInt( tokens[3] ) );
+		ui.setPublicKey( zipKey.deZipPublicKey( new JSONArray( tokens[4] ) ) );
+		ui.setPermissions( Integer.parseInt( tokens[5] ) );
+		ui.setNodeConnectionIndex( Integer.parseInt( tokens[6] ) );
+		ui.setNodeConnectionHostName( tokens[7] );
+		ui.setNodeConnectionPort( Integer.parseInt( tokens[8] ) );
+		ui.setCompanyName( tokens[9] );
+		ui.setCompanyIndex( Integer.parseInt( tokens[10] ) );
+		ui.setCompanyNodeIndex( Integer.parseInt( tokens[11] ) );
+		ui.setSecurityKey( tokens[12] );
+		
+		return ui;
+	}
+
+
 	
 }

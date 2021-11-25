@@ -8,7 +8,7 @@ package chain.component.info;
  * @author giorg
  *
  */
-public class NodeInfo {
+public class NodeInfo implements infoClasses {
 
 	// index of node
 	private int nodeIndex;
@@ -20,11 +20,14 @@ public class NodeInfo {
 	// It's start at 0. It can increment or decrement.
 	private long confidence;
 
-	
-	
 	// TODO: add other info about a single node
 
 
+	
+	
+	
+	
+	
 
 	public NodeInfo() {
 	}
@@ -90,4 +93,26 @@ public class NodeInfo {
 				+ ", confidence=" + confidence + "]";
 	}
 	
+	
+	
+	public static String listGlobalVariablesForPersistance = "nodeIndex;nodeHostName;nodePort;confidence";
+	
+	public String toCSV( String DELIMITER ) {
+		return nodeIndex 		+ DELIMITER 
+				+ nodeHostName 	+ DELIMITER 
+				+ nodePort 		+ DELIMITER 
+				+ confidence;
+	}
+
+	public static NodeInfo fromCSV(String[] split) {
+		NodeInfo ni = new NodeInfo();
+		
+		ni.setNodeIndex( Integer.parseInt( split[0] ) );
+		ni.setNodeHostName( split[1] );
+		ni.setNodePort( Integer.parseInt( split[2] ) );
+		ni.setConfidence( Integer.parseInt( split[3] ) );
+		
+		return ni;
+	}
+
 }

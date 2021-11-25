@@ -5,6 +5,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 
 import org.json.simple.JSONArray;
 
@@ -98,5 +99,11 @@ public class zipKey {
 		X509EncodedKeySpec pkcs8EncodedKeySpecPcK = new X509EncodedKeySpec( pbcKey.getEncoded() );
 		return pkcs8EncodedKeySpecPcK.getEncoded();
 	}
+
+	public static String zipPublicKeyStr (PublicKey pbcKey) {
+		X509EncodedKeySpec pkcs8EncodedKeySpecPcK = new X509EncodedKeySpec( pbcKey.getEncoded() );
+		return Arrays.toString( pkcs8EncodedKeySpecPcK.getEncoded() );
+	}
+
 	
 }

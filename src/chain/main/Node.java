@@ -1,6 +1,7 @@
 package chain.main;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -14,14 +15,19 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.crypto.Cipher;
 import javax.xml.bind.DatatypeConverter;
 
 import org.json.JSONObject;
+import org.json.simple.parser.ParseException;
 
 import chain.component.Block;
 import chain.component.info.UsersInfo;
+import chain.extraClasses.GuaranteerNodePersistantManager;
+import chain.extraClasses.zipKey;
 
 
 
@@ -103,7 +109,15 @@ public class Node {
 	// index of node
 	private int index;
 
-
+	
+	
+	// Number of contemporaneus thread / SC in a Node
+	private int numberOfContemporaneusSC = 2;
+	
+	// Pool for Smart contract execution
+    ExecutorService executor;
+	
+	
 
 
 
@@ -177,11 +191,18 @@ public class Node {
 		
 		// Load chain from guaranteer
 		loadChain();
-
+		
+		this.executor = Executors.newFixedThreadPool( numberOfContemporaneusSC );
 	}
 
+	public Node () throws FileNotFoundException, IOException, ParseException {
+		loadNode();
+		loadChain();
+		
+		this.executor = Executors.newFixedThreadPool( numberOfContemporaneusSC );
+	}
 
-
+	
 
 
 
@@ -370,7 +391,10 @@ public class Node {
 						setMilestone(jObj);
 						break;
 
-
+					case "SmartContractExecution":
+						SmartContractExecution( jObj );
+						break;
+						
 					default:
 						returnString.put("Error", "Node is not able to perform action: " + jObj.getString("ActionToPerform"));
 					}
@@ -478,10 +502,7 @@ public class Node {
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
-			
-			System.out.println("Jo: " + jo);
-			
+			e.printStackTrace();			
 			return false;
 		}
 
@@ -592,7 +613,22 @@ public class Node {
 
 	// TODO: Smart contract control
 
-
+	private void SmartContractExecution(JSONObject jObj) {
+		// mette l'utente in attesa
+		
+		// lancia il thread SCExecution
+		
+		
+		
+		// TODO: Mette un timer sugli SCExecution ( di timeOut ) 
+	}
+	
+	public void sendSCResponse(JSONObject jobj) {
+		// toglie dalla lista di attesa un utente
+		
+		// Manda una risposta
+	}
+	
 
 
 
@@ -618,7 +654,9 @@ public class Node {
 
 	// TODO: ReadChain
 
-	public void setListenerIsActive( boolean active ) {
+	public void setListenerIsActive( boolean active ) throws IOException {
+		if (!active) saveNode();
+		
 		this.listenerIsActive = active;
 	}
 
@@ -761,5 +799,77 @@ public class Node {
 	}
 
 
+	
+	
+	
+	
+	/*
+	 * 
+	 * 	Files actions methods
+	 * 
+	 * 
+	 */
+
+	// TODO: PErmettere di aggiungere ogni file in un path diverso e permettere i backUp cambiando ogni volta il nome del file con la data odierna
+	// TOOD: Fix "loadNode" che possa scegliere la versione meno vecchia per ogni file
+	GuaranteerNodePersistantManager npm;
+
+	private String pathFiles = "D:\\Lavoro\\AllenaBusinessChain\\src\\chain\\files\\Node\\";
+
+	private String GUI_F = "NodeUsersInfo.csv";
+	private String GEXT_F = "NodeExtraInfo.txt";
+
+
+	private void controlFilePath() {
+		if (npm == null) npm = new GuaranteerNodePersistantManager(pathFiles);
+
+		// check that all necessary file are present
+		npm.checkFile(this.GUI_F);
+		npm.checkFile(this.GEXT_F);
+	}
+
+	private void saveNode() throws IOException {
+		if (npm == null ) controlFilePath();
+
+		npm.saveCSVFile(
+				this.userDataList,
+				UsersInfo.listGlobalVariablesForPersistance,
+				this.GUI_F
+				);
+
+		JSONObject jo = new JSONObject();
+		jo.put("socketPort", this.socketPort);
+		jo.put("privateKey", zipKey.zipPrivateKey( this.privateKey ));
+		jo.put("publicKey", zipKey.zipPublicKey( this.publicKey ));
+		jo.put("socketHostName", this.socketHostName);
+		jo.put("guarantorHostName", this.guarantorHostName);
+		jo.put("guarantorPort", this.guarantorPort);
+		jo.put("index", this.index);
+		jo.put("numberOfContemporaneusSC", this.numberOfContemporaneusSC);
+
+		npm.saveTxTFile(jo, GEXT_F);
+	}
+
+
+	private void loadNode() throws FileNotFoundException, IOException, ParseException {
+		if (npm == null ) controlFilePath();		
+
+		try {
+			this.userDataList = npm.CSVReaderListUsersInfo(GUI_F);
+
+			this.socketPort = Integer.parseInt( npm.JSONReadFromFile("socketPort", GEXT_F) );
+			this.privateKey = zipKey.deZipPrivateKey( npm.JSONReadStringFromFileJA("privateKey", GEXT_F) );
+			this.publicKey = zipKey.deZipPublicKey( npm.JSONReadStringFromFileJA("publicKey", GEXT_F) );
+			this.socketHostName = npm.JSONReadFromFile("socketHostName", GEXT_F);
+			this.guarantorHostName = npm.JSONReadFromFile("guarantorHostName", GEXT_F);
+			this.guarantorPort = Integer.parseInt( npm.JSONReadFromFile("guarantorPort", GEXT_F) );
+			this.index = Integer.parseInt( npm.JSONReadFromFile("index", GEXT_F) );
+			this.numberOfContemporaneusSC = Integer.parseInt( npm.JSONReadFromFile("numberOfContemporaneusSC", GEXT_F) );
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 }

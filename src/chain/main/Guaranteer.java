@@ -1,6 +1,7 @@
 package chain.main;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -15,11 +16,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import org.json.JSONObject;
+import org.json.simple.parser.ParseException;
 
 import chain.component.Block;
 import chain.component.Transaction;
 import chain.component.info.NodeInfo;
 import chain.component.info.UsersInfo;
+import chain.extraClasses.GuaranteerNodePersistantManager;
 
 
 public class Guaranteer {
@@ -54,6 +57,9 @@ public class Guaranteer {
 	private Guaranteer.createNode creteNode;
 
 	private int socketPort;
+	
+
+
 
 
 
@@ -69,7 +75,9 @@ public class Guaranteer {
 	 * 
 	 * 	Constant list:
 	 * 		1) Max bytes for a block;
-	 * 		2) Time that local thread " TimerHelper " wait to try to send a Block to guaranteer;
+	 * 		2) Time that local thread " TimerHelper " wait to try to send a Block to guaranteer;	
+	 *		3) variable that update to Guarenteer's thread that must stop
+	 *		4) Path where save info about Guaranteer 
 	 * 
 	 * 
 	 * 	Time for send a new block to guaranteer is set in second, but in the thread " TimerHelper " is used in milliseconds
@@ -87,20 +95,56 @@ public class Guaranteer {
 
 
 
+
+
+
+
+	public Guaranteer() throws FileNotFoundException, IOException, ParseException {
+		loadGuaranteer();
+		loadComponents();
+
+	}
+
+
 	public Guaranteer(int socketPort) 
-	{
-		// Initialization of lists
-		this.pool = new ArrayList<Transaction> ();
-		this.MileStone = new HashMap<String, Block>();
+	{		
+
 		this.socketPort = socketPort;
 
 
-		creteNode = new Guaranteer.createNode( this );
+		// Control if file is present
+		loadComponents();
+
+		// BlockZero sent hash and default data
+		Block blockZero = new Block();
+		blockZero.setIndex( "0a" );
+		blockZero.setData("BlockZero".getBytes());
+		this.currentBlockIndex = "1a";
+
+		this.Head = this.Tail = blockZero;
+		MileStone.put(blockZero.getIndex(), blockZero);
+
+	}
+
+
+
+	
+	
+	public void loadComponents() {
+		
+		// control if file is present
+		controlFilePath();
+
+
+		// Initialization of lists
+		this.pool = new ArrayList<Transaction> ();
+		this.MileStone = new HashMap<String, Block>();
 
 		nodeList = new ArrayList<NodeInfo> ();
 		userDataList = new ArrayList<UsersInfo> ();
 
-
+		// Thread for creation of a new Block
+		creteNode = new Guaranteer.createNode( this );
 
 
 		// Create thread timer
@@ -115,19 +159,7 @@ public class Guaranteer {
 
 
 
-		// BlockZero sent hash and default data
-		Block blockZero = new Block();
-		blockZero.setIndex( "1x0a" );
-		blockZero.setData("BlockZero".getBytes());
-		this.currentBlockIndex = "1a";
-
-		this.Head = this.Tail = blockZero;
-
-
-
-
 		// Thread that update the Milestone every day at midnight
-		MileStone.put(blockZero.getIndex(), blockZero);
 		Calendar calendar = Calendar.getInstance();
 		calendar.add(Calendar.DAY_OF_YEAR, 1);
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -137,11 +169,8 @@ public class Guaranteer {
 		( new Timer() ).schedule( new updateMilestone( this ) , calendar.getTime(), 86400000 );
 
 	}
-
-
-
-
-
+	
+	
 
 
 
@@ -176,11 +205,11 @@ public class Guaranteer {
 
 		// creation of a new block
 		// TODO: control size of all transaction
-		if ( ( pollSize(pool) > blockMaxSize || t == null ) && pool.size() != 0 ) 
+		if ( ( t == null || pollSize(pool) > blockMaxSize ) && pool.size() > 0 ) 
 		{
 			currentTransactionNumeber = 0;
 			creteNode.newBlock(pool, currentBlockIndex);
-
+			
 			currentBlockIndex = ( Integer.parseInt( currentBlockIndex.substring(0, 1) ) + 1 ) + currentBlockIndex.substring(1); 
 			pool.clear();
 		}
@@ -198,14 +227,17 @@ public class Guaranteer {
 	}
 
 	private int pollSize(List<Transaction> poolList) {
-		
+
 		int poollWeight = 0;
-		
-		for ( Transaction t : poolList ) 
-		{			
-			poollWeight += t.getLenght();
+
+		if (poolList.size() != 0 && poolList != null ) 
+		{
+			for ( Transaction t : poolList ) 
+			{			
+				poollWeight += t.getLenght();
+			}
 		}
-				
+
 		return poollWeight;
 	}
 
@@ -266,7 +298,7 @@ public class Guaranteer {
 	}
 
 
-	private void addBlock( Block block) 
+	public void addBlock( Block block) 
 	{
 		Tail = Tail.setNextBlock( block );
 	}
@@ -317,7 +349,7 @@ public class Guaranteer {
 
 				try (
 						ServerSocket serverSocket = new ServerSocket( this.socketPort );
-						) {
+					) {
 
 					// Execute an controller for serve action
 					(new Guaranteer.ResponseThread(serverSocket.accept(), sincronizer, this.guaranteer)).start();
@@ -368,13 +400,12 @@ public class Guaranteer {
 				try (
 						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 						BufferedReader in = new BufferedReader( new InputStreamReader(socket.getInputStream()) );
-				) {
+						) {
 
 					jObj = new JSONObject(in.readLine());
 
 					// aDD NODE IN the node LIST
 					setNodeToList(jObj);
-					setUserToList(jObj);
 
 
 
@@ -382,7 +413,6 @@ public class Guaranteer {
 					switch ( jObj.getString("ActionToPerform") ) {
 
 					case "postTransactionInPool":
-
 						returnObj.put("BlockIndex", this.guaranteer.addTTPool( new Transaction( jObj.getJSONObject("Transaction") ) ) );
 						break;
 
@@ -395,8 +425,8 @@ public class Guaranteer {
 					case "LoadChain":
 						returnObj.put("ResponseString", loadChain(out, Head) );
 						break;
-						
-					
+
+
 					case "checkUser":
 						returnObj.put("UsersStatus", checkUser( jObj ) );
 						break;
@@ -406,14 +436,14 @@ public class Guaranteer {
 						throw new IllegalArgumentException("Unexpected value: " + jObj.getString("ActionToPerform"));
 					}
 
-					
-					
+
+
 					// WRITE return message
 					returnObj.put("user", "guaranteer");
 					out.println( returnObj.toString() );
 
 				}
-				
+
 
 				// close socket and stream
 				socket.close();
@@ -423,6 +453,8 @@ public class Guaranteer {
 				System.err.println("IOException in 'ResponseThread' Guarantter: " + e.getMessage() );		
 			}
 		}
+
+
 
 	}
 
@@ -438,6 +470,7 @@ public class Guaranteer {
 	 * 	START ACTION ON THE CHAIN
 	 * 
 	 */
+	
 
 	public void setNodeToList(JSONObject jObj ) {
 
@@ -465,32 +498,6 @@ public class Guaranteer {
 				nodeList.add( ni );
 			}	
 		}
-	}
-
-	public void setUserToList(JSONObject jObj ) {
-
-		if ( jObj.has("user") ) {
-			JSONObject userInfo = jObj.getJSONObject("user");
-
-			boolean isPresent = false;
-			for (UsersInfo ui : userDataList ) {
-				if ( ui.getIndex().equals( userInfo.getString("index") ) ) {
-					isPresent = true;
-				}
-			}
-
-
-			if ( !isPresent || userInfo.isEmpty() ) {
-				UsersInfo ui = new UsersInfo();
-				ui.setIndex( userInfo.getString("index") );
-				ui.setName( userInfo.getString("name") );
-				ui.setSurname( userInfo.getString("surname") );
-//				ui.setData( userInfo.get("data").toString().getBytes() );
-				
-				userDataList.add( ui );
-			}	
-		}
-
 	}
 
 	public String loadChain(PrintWriter out, Block currentBlock) {
@@ -537,17 +544,25 @@ public class Guaranteer {
 	// TODO: Fare dei controlli seri su gli utenti
 	private int checkUser(JSONObject jO) {
 		JSONObject user = jO.getJSONObject("user");
-		
+
 		try {
 			this.userDataList.add( UsersInfo.generateFromJSON( user ) );
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
 		}
-		
+
 		return 1;
 	}
 	
+	public void updateTailOnPersistance(Block b) {
+		if (this.Head == null) {
+			this.Head = this.Tail = b;
+		} else  {
+			this.Tail = this.Tail.setNextBlock(b);	
+		}
+	}
+
 	/* 
 	 * 
 	 * 	END ACTION ON THE CHAIN
@@ -577,14 +592,14 @@ public class Guaranteer {
 		if ( nodeList.stream()
 				.filter( inf -> inf.getNodeIndex() == jo.getInt("Index"))
 				.count() > 0 
-		) { return "nodeAddFail"; }
+				) { return "nodeAddFail"; }
 
 		nodeList.add( 
 				new NodeInfo(
 						jo.getInt("Index"),
 						jo.getString("HostName"),
 						jo.getInt("Port")
-				) );
+						) );
 
 
 		return "nodeAddSuccess";
@@ -601,14 +616,14 @@ public class Guaranteer {
 
 						PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 						BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-				) {
+						) {
 
 					JSONObject jObj = new JSONObject();
 					jObj.put("ActionToPerform", message);
 					jObj.put("NewBlock", obj );
 					jObj.put("user", "guaranteer");
 
-					
+
 					out.println( jObj.toString() );
 
 				}
@@ -625,8 +640,17 @@ public class Guaranteer {
 		return this.listenerIsActive;
 	}
 
-	public void setListenerIsActive(boolean state) {
-		this.listenerIsActive = state;
+	public void setListenerIsActive(boolean state) throws IOException {
+		if (!state) { 
+			// try to create a last block and save all data in a file
+			currentBlockIndex = Tail.getIndex();
+			System.out.println("currentBlockIndex: " + currentBlockIndex);
+			
+			addTTPool( null );
+			saveGuaranteer();
+		}
+
+		this.listenerIsActive = state;		
 	}
 
 	public HashMap<String, Block> getMileStone() {
@@ -652,9 +676,117 @@ public class Guaranteer {
 
 
 
-
-
 	
+
+
+
+
+
+	/*
+	 * 
+	 * 	Files actions methods
+	 * 
+	 * 
+	 */
+
+	// TODO: PErmettere di aggiungere ogni file in un path diverso e permettere i backUp cambiando ogni volta il nome del file con la data odierna
+	// TOOD: Fix "loadGuaranteer" che possa scegliere la versione meno vecchia per ogni file
+	GuaranteerNodePersistantManager gpm;
+
+	private String pathFiles = "D:\\Lavoro\\AllenaBusinessChain\\src\\chain\\files\\guaranteer\\";
+
+	private String GNL_F = "GuaranteerNodeList.csv";
+	private String GUI_F = "GuaranteerUsersInfo.csv";
+	private String GM_F = "GuaranteerMilestone.csv";
+	private String GEXT_F = "GuaranteerExtraInfo.txt";
+	private String GC_F = "GuaranteerChainCopy.csv";
+
+
+	private void controlFilePath() {
+		if (gpm == null) gpm = new GuaranteerNodePersistantManager(pathFiles);
+
+		// check that all necessary file are present
+		gpm.checkFile(this.GNL_F);
+		gpm.checkFile(this.GUI_F);
+		gpm.checkFile(this.GM_F);
+		gpm.checkFile(this.GEXT_F);
+		gpm.checkFile(this.GC_F);
+	}
+
+	private void saveGuaranteer() throws IOException {
+		if (gpm == null ) controlFilePath();		
+
+		int cont = 0;
+
+		Block block = Head;
+		do {
+			cont++;
+			block = block.getNextBlock();
+		} while ( block.hasNextBlock() );
+
+
+		System.out.println("cont: " + cont);
+
+
+		gpm.saveCSVFile(
+				this.nodeList,
+				NodeInfo.listGlobalVariablesForPersistance,
+				this.GNL_F
+				);
+
+		gpm.saveCSVFile(
+				this.userDataList,
+				UsersInfo.listGlobalVariablesForPersistance,
+				this.GUI_F
+				);
+
+		gpm.saveCSVFile(
+				this.MileStone,
+				Block.listGlobalVariablesForPersistance,
+				this.GM_F
+				);		
+
+		// Tutti i blocchi del garante  ! ! ! 
+		gpm.saveChain(
+				Head,
+				GC_F
+				);
+
+
+
+
+		JSONObject jo = new JSONObject();
+		jo.put("socketPort", this.socketPort);
+
+		gpm.saveTxTFile(jo, GEXT_F);
+	}
+
+
+	private void loadGuaranteer() throws FileNotFoundException, IOException, ParseException {
+		if (gpm == null ) controlFilePath();		
+
+		try {
+
+			this.MileStone = gpm.CSVReaderHashMap(GM_F);
+			this.nodeList = gpm.CSVReaderListNodeInfo(GNL_F);
+			this.userDataList = gpm.CSVReaderListUsersInfo(GUI_F);
+
+			this.socketPort = Integer.parseInt( gpm.JSONReadFromFile("socketPort", GEXT_F) );
+
+
+			gpm.loadChain(this, GC_F, Head, Tail);
+
+			currentBlockIndex = this.Tail.getIndex();
+			
+			
+
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+
 	
 
 

@@ -60,21 +60,11 @@ public class Users {
 	// path of file where are saved files
 	private String pathFile = "\\src\\chain\\files\\users.json";
 
-	
-	
+
+
 
 
 	public Users() {
-
-		//		// controll if file path exist
-		//		Path path = Paths.get("/Users/chandra/sample.txt");
-		//        System.out.println("isPathExists: " + Files.exists(path));
-		//		
-		//        if ( !Files.exists(path) ) {
-		//        	String currentPath = System.getProperty( pathFile );
-		//        	System.out.println("Path: " + currentPath);
-		//        }
-
 
 		// control if file is present
 		this.pathFile = System.getProperty("user.dir").concat(this.pathFile);
@@ -290,9 +280,9 @@ public class Users {
 		System.out.println("\n\n----------KEYS CREATION END----------" + "\n" + "Private key: " + key.getPrivate()
 		+ "\n" + "Public key: " + key.getPublic() + "\n" + "----------KEYS CREATION START----------\n\n");
 	}
-	
-	
-	
+
+
+
 	/*
 	 * 
 	 * 	Users actions
@@ -309,14 +299,14 @@ public class Users {
 		this.nodeConnectionHostName = nodeHostname;
 		this.nodeConnectionPort = nodePort;
 		this.nodeConnectionIndex = nodeIndex;
-		
+
 		return this.sendTransaction( t );
 	}
-	
+
 	public JSONObject sendTransaction(Transaction t) {
 		JSONObject jObj = new JSONObject();
 		jObj.put("ActionToPerform", "postTransactionInPool");
-		
+
 		t.setNodeDeestination(this.nodeConnectionHostName, this.nodeConnectionPort, this.nodeConnectionIndex);
 		jObj.put("Transaction", t.toJObj());
 
@@ -328,10 +318,10 @@ public class Users {
 
 		this.nodeConnectionHostName = nodeHostname;
 		this.nodeConnectionPort = nodePort;
-		
+
 		return this.getTransactionByIndex(transactionHash);
 	}
-	
+
 	public JSONObject getTransactionByIndex(String transactionHash) {
 		JSONObject jsonObject = new JSONObject();
 
@@ -339,7 +329,7 @@ public class Users {
 		jsonObject.put("BlockIndex", transactionHash);
 		jsonObject.put("Transaction", new Transaction(this, new JSONObject() ).toJObj());
 
-		
+
 		return sendToNode( jsonObject );
 	}
 
@@ -355,8 +345,8 @@ public class Users {
 
 
 
-	
-	
+
+
 
 
 
@@ -367,48 +357,45 @@ public class Users {
 	 */
 	public void loadUsers() throws FileNotFoundException, IOException, ParseException {
 
-		try {
-			JSONParser parser = new JSONParser();
-			Object obj = parser.parse(new FileReader(this.pathFile));
+		JSONParser parser = new JSONParser();
+		Object obj = parser.parse(new FileReader(this.pathFile));
 
-			org.json.simple.JSONObject jsonObject = (org.json.simple.JSONObject) obj;
-
-
-			this.index = (String) jsonObject.get("index");
-			this.name = (String) jsonObject.get("name");
-			this.surname = (String) jsonObject.get("surname");
+		org.json.simple.JSONObject jsonObject = (org.json.simple.JSONObject) obj;
 
 
-			// Public and private Key
-			this.privateKey = zipKey.deZipPrivateKey( (JSONArray) jsonObject.get("privateKey") );
-			this.publicKey = zipKey.deZipPublicKey( (JSONArray) jsonObject.get("publicKey") );
-			
-			this.balance = (long) jsonObject.get("balance");
-			
-			
-			// TODO
-			// this.data = jsonObject.get("name");
+		this.index = (String) jsonObject.get("index");
+		this.name = (String) jsonObject.get("name");
+		this.surname = (String) jsonObject.get("surname");
 
-			this.permissions = Integer.parseInt( jsonObject.get("permissions").toString() );
 
-			this.nodeConnectionIndex = Integer.parseInt( jsonObject.get("nodeConnectionIndex").toString() );
-			this.nodeConnectionHostName = (String) jsonObject.get("nodeConnectionHostName");
-			this.nodeConnectionPort = Integer.parseInt( jsonObject.get("nodeConnectionPort").toString() );
+		// Public and private Key
+		this.privateKey = zipKey.deZipPrivateKey( (JSONArray) jsonObject.get("privateKey") );
+		this.publicKey = zipKey.deZipPublicKey( (JSONArray) jsonObject.get("publicKey") );
 
-			this.CompanyName = (String) jsonObject.get("CompanyName");
-			this.CompanyIndex = Integer.parseInt( jsonObject.get("CompanyIndex").toString() );
-			this.CompanyNodeIndex = Integer.parseInt( jsonObject.get("CompanyNodeIndex").toString() );
+		this.balance = (long) jsonObject.get("balance");
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+
+		// TODO
+		// this.data = jsonObject.get("name");
+
+		this.permissions = Integer.parseInt( jsonObject.get("permissions").toString() );
+
+		this.nodeConnectionIndex = Integer.parseInt( jsonObject.get("nodeConnectionIndex").toString() );
+		this.nodeConnectionHostName = (String) jsonObject.get("nodeConnectionHostName");
+		this.nodeConnectionPort = Integer.parseInt( jsonObject.get("nodeConnectionPort").toString() );
+
+		this.CompanyName = (String) jsonObject.get("CompanyName");
+		this.CompanyIndex = Integer.parseInt( jsonObject.get("CompanyIndex").toString() );
+		this.CompanyNodeIndex = Integer.parseInt( jsonObject.get("CompanyNodeIndex").toString() );
+
+
 	}
-	
+
 	public void saveUsers() throws IOException {
 
 		JSONObject jsonObject = new JSONObject();
 
-		
+
 		jsonObject.put("index", this.index);
 		jsonObject.put("name", this.name);
 		jsonObject.put("surname", this.surname);
@@ -435,41 +422,41 @@ public class Users {
 		file.close();
 	}
 
-	
 
 
-	
-	
-	
+
+
+
+
 	private JSONObject sendToNode (JSONObject jsonObject) {
-		
+
 		String transactionData = "";
-		
-		
+
+
 		try (
 				Socket s = new Socket(this.nodeConnectionHostName, this.nodeConnectionPort );
 				PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 				BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-		) {
+				) {
 
 			out.println(jsonObject.toString());
 			transactionData = in.readLine();
 
 		} catch (IOException e) {
-//			e.printStackTrace();
+			//			e.printStackTrace();
 			transactionData = "Error";
 		}
-		
+
 		return new JSONObject( transactionData );
 	}
-	
 
 
 
 
 
-	
-	
+
+
+
 
 	@Override
 	public String toString() {
