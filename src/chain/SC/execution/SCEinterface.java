@@ -1,16 +1,43 @@
 package chain.SC.execution;
 
+import java.util.List;
+
 public interface SCEinterface {
 
-	// Variable list
-	
 	
 	/**
-	 * 	Reader input
-	 * 	Decompose input between variable list that contain variable, startPoint of function and ecc..
+	 * 	Moves forward one position with reading of bytecode list 
+	 * @return 
 	 * 
 	 */
-	public void readerInput(String inputStr);
+	public boolean move();
 	
+	/**
+	 * 	Throw an runtime exception thath return a to user a message.
+	 * 
+	 * @param error String The message to return
+	 */
+	public void error(String error);
 	
+	/**
+	 * 	Execute bytecode comands 
+	 * 
+	 * @param ctName name of "contract" to execute
+	 */
+	public void executeCoontract(String ctName);
+	
+	/**
+	 * 	Remove the value on top of heap and return it 
+	 * 
+	 * @param ct String the name of contract
+	 */
+	public Object pop(String ct);
+	
+	/**
+	 * 	Add a value on top of the heap
+	 * 
+	 * @param ct String the name of contract
+	 * @param obj The object to put on top of heap
+	 */
+	public void add(String ct, Object obj);
 }
