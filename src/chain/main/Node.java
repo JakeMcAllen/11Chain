@@ -13,6 +13,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -24,6 +25,7 @@ import javax.xml.bind.DatatypeConverter;
 import org.json.JSONObject;
 import org.json.simple.parser.ParseException;
 
+import chain.SC.execution.SCExecuter;
 import chain.component.Block;
 import chain.component.info.UsersInfo;
 import chain.extraClasses.GuaranteerNodePersistantManager;
@@ -109,15 +111,15 @@ public class Node {
 	// index of node
 	private int index;
 
-	
-	
+
+
 	// Number of contemporaneus thread / SC in a Node
 	private int numberOfContemporaneusSC = 2;
-	
+
 	// Pool for Smart contract execution
-    ExecutorService executor;
-	
-	
+	ExecutorService executor;
+
+
 
 
 
@@ -188,21 +190,21 @@ public class Node {
 		// Start listener module
 		(new Node.getDataThread( this.socketPort, this )).start();
 
-		
+
 		// Load chain from guaranteer
 		loadChain();
-		
+
 		this.executor = Executors.newFixedThreadPool( numberOfContemporaneusSC );
 	}
 
 	public Node () throws FileNotFoundException, IOException, ParseException {
 		loadNode();
 		loadChain();
-		
+
 		this.executor = Executors.newFixedThreadPool( numberOfContemporaneusSC );
 	}
 
-	
+
 
 
 
@@ -253,7 +255,7 @@ public class Node {
 				out.println( JObj.toString() );
 
 				Head = Tail = AddNextBlock( in );
-				
+
 				MileStone = new HashMap<String, Block>();
 				MileStone.put(Head.getIndex(), Head);
 			}
@@ -375,7 +377,6 @@ public class Node {
 						break;
 
 					case "readTransaction":
-
 						returnString = getTransactionFromObject( jObj );
 						break;
 
@@ -392,9 +393,9 @@ public class Node {
 						break;
 
 					case "SmartContractExecution":
-						SmartContractExecution( jObj );
+						returnString = SmartContractExecution( jObj );
 						break;
-						
+
 					default:
 						returnString.put("Error", "Node is not able to perform action: " + jObj.getString("ActionToPerform"));
 					}
@@ -568,8 +569,8 @@ public class Node {
 
 	private void setMilestone(JSONObject jo) {
 		String b = Block.generateBlockFromJSON( jo.getJSONObject("NewBlock") ).getIndex();
-		
-		
+
+
 		Block nextB = null;
 		do {
 
@@ -582,9 +583,9 @@ public class Node {
 			}
 
 		} while ( nextB.hasNextBlock() );
-		
+
 	}
-	
+
 	/**
 	 **
 	 ** 	END CHAIN ACTIONS
@@ -613,22 +614,35 @@ public class Node {
 
 	// TODO: Smart contract control
 
-	private void SmartContractExecution(JSONObject jObj) {
-		// mette l'utente in attesa
+	private JSONObject SmartContractExecution(JSONObject jObj) {
+
+		// Carica lo smart contract da una transazione
+		JSONObject sc = getTransactionFromObject( jObj.getJSONObject("SCTransaction") );
+
+
+		// TODO: Controlla lo smart contract
+
+
+		// Esegue lo S.C.
+		SCExecuter sce = new SCExecuter( 
+					Arrays.asList( sc.getString("data").toString().split(";") ), 
+					jObj.getString("InputFile") 
+				);
+		sce.executeCoontract( jObj.getString("scName") );
 		
-		// lancia il thread SCExecution
-		
-		
-		
-		// TODO: Mette un timer sugli SCExecution ( di timeOut ) 
+		// Ottine l'outpt e lo invia all'utente
+		JSONObject joo = new JSONObject();
+		joo.put("Output", sce.getOutput());
+
+		return joo;
 	}
-	
+
 	public void sendSCResponse(JSONObject jobj) {
 		// toglie dalla lista di attesa un utente
-		
+
 		// Manda una risposta
 	}
-	
+
 
 
 
@@ -656,7 +670,7 @@ public class Node {
 
 	public void setListenerIsActive( boolean active ) throws IOException {
 		if (!active) saveNode();
-		
+
 		this.listenerIsActive = active;
 	}
 
@@ -799,10 +813,10 @@ public class Node {
 	}
 
 
-	
-	
-	
-	
+
+
+
+
 	/*
 	 * 
 	 * 	Files actions methods
@@ -865,8 +879,8 @@ public class Node {
 			this.guarantorPort = Integer.parseInt( npm.JSONReadFromFile("guarantorPort", GEXT_F) );
 			this.index = Integer.parseInt( npm.JSONReadFromFile("index", GEXT_F) );
 			this.numberOfContemporaneusSC = Integer.parseInt( npm.JSONReadFromFile("numberOfContemporaneusSC", GEXT_F) );
-			
-			
+
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

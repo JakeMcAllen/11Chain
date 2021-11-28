@@ -36,15 +36,18 @@ public class SCExecuter implements SCEinterface {
 	 */
 	private Map<String, List<Object>> heap = null;
 
+	// I/O
 	private String output = "";
+	private String[] inputVar = null;
+	private int inputVarCounter = 0;
 
-
+	// Bytecode
 	private String bytecode = null;
 	private int bytecodeIndex = 0;
 
+	
 
-
-	public SCExecuter(List<String> inputStr) {
+	public SCExecuter(List<String> inputStr, String inputVar) {
 
 		this.listBytecode = new ArrayList<String>();
 
@@ -53,6 +56,8 @@ public class SCExecuter implements SCEinterface {
 
 		this.heap = new HashMap<String, List<Object>>();
 
+		
+		this.inputVar = inputVar.split(";");
 	}
 
 
@@ -92,9 +97,10 @@ public class SCExecuter implements SCEinterface {
 
 		this.listVariable.put(ctName, new HashMap<String, Varible> ());
 		heap.put(ctName, new ArrayList<Object> ());
+		boolean rtn = false;
+		
 
-
-		while ( move() ) {
+		while ( move() && !rtn ) {
 
 			String[] cmd = this.bytecode.split(" ");
 			Object var = null;
@@ -408,40 +414,64 @@ public class SCExecuter implements SCEinterface {
 				break;
 
 			case "READINPUT":
-
+				var = this.inputVar[ this.inputVarCounter++ ];
+				
+				heap.get(ctName).add(var);
 				break;
 
 			case "GOTO":
-				vl = Integer.parseInt( cmd[1] );
+				vl = Integer.parseInt( cmd[1].substring(1, cmd[1].length() ) );
 
-				while ( this.bytecode.split(" ")[0] == "LN" && Integer.parseInt( this.bytecode.split(" ")[0] ) == vl ) 
-				{ move(); }
-				break;
-
-			case "LN":
-
+				while ( true ) { 
+					if ( this.bytecode.substring(0, 1) == "L" && this.bytecode.length() >= 2 ) {
+						if ( Integer.parseInt( this.bytecode.split(" ")[1] ) == vl ) {
+							break;
+					} }
+					
+					move(); 
+				}
 				break;
 
 			case "INVOKEVIRTUAL":
 
-				// TODO: gestire tutti i casi
 				switch (cmd[1]) {
-				case "PRINT":
-					var = pop(ctName);
-
-					this.output.concat( var.toString() );
-					break;
-
-				case "CONTR":
-
-					break;
-
-				case "RETURN":
-					// TODO: End of reading ! 
-					break;
-
-				default:
-					throw new IllegalArgumentException("Unexpected value: " + cmd[1] );
+					case "PRINT":
+						var = pop(ctName);
+	
+						this.output.concat( var.toString() );
+						break;
+	
+					case "CONTR":
+						var = pop(ctName);
+						vl = Integer.parseInt( cmd[2].substring(1, cmd[2].length() ) );
+	
+						
+						if ( Varible.getType( var ).getClss() == Boolean.class ) {
+	
+							if ( Boolean.parseBoolean( (String) var ) ) {
+	
+								while ( true ) { 
+									if ( this.bytecode.substring(0, 1) == "L" && this.bytecode.length() >= 2 ) {
+										if ( Integer.parseInt( this.bytecode.split(" ")[1] ) == vl ) {
+											break;
+									} }
+									
+									move(); 
+								}
+								
+							}
+							
+							
+						} else throw new RuntimeErrorException(null, "Error on input contro for CONTR");
+						
+						break;
+	
+					case "RETURN":
+						rtn = true;
+						break;
+	
+					default:
+						throw new IllegalArgumentException("Unexpected value: " + cmd[1] );
 				}
 
 				break;
@@ -470,5 +500,8 @@ public class SCExecuter implements SCEinterface {
 		heap.get(ct).add(obj);
 	}
 
-
+	public String getOutput() {
+		return this.output;
+	}
+	
 }

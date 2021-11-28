@@ -225,7 +225,8 @@ public class Guaranteer {
 
 		return transactionIndex;
 	}
-
+	
+	
 	private int pollSize(List<Transaction> poolList) {
 
 		int poollWeight = 0;

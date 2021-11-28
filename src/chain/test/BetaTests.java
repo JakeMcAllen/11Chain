@@ -39,7 +39,9 @@ public class BetaTests {
 	
 	@Test
 	public void generalTest() {
-		System.out.println( true == true );
+		String p = "L1òsodihf";
+
+		System.out.println(p.substring(1, p.length()));
 	}
 	
 	
