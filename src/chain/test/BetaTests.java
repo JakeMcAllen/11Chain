@@ -1,9 +1,12 @@
 package chain.test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
+
+import chain.SC.execution.SCExecuter;
 
 
 /*
@@ -27,22 +30,17 @@ import org.junit.Test;
 
 public class BetaTests {
 
-//	@Test
-//	public void BetaTestSC() {
-//		String inputString = "<404, mapping>,<40>,<272, Item>,<273, ::>,<270, string>,<41>,<257, counter>,<59>,<404, mapping>,<40>,<271, List>,<273, ::>,<270, string>,<41>,<257, pop1>,<59>,<100, contract>,<257, p>,<40>,<270, number>,<257, i1>,<44>,<270, number>,<257, i2>,<44>,<270, number>,<257, i3>,<41>,<123>,<270, number>,<257, x>,<61>,<256, 10>,<43>,<257, i1>,<43>,<257, i2>,<43>,<257, i3>,<59>,<403, print>,<40>,<257, x>,<43>,<256, 10>,<41>,<59>,<257, counter>,<61>,<257, x>,<43>,<256, 10>,<59>,<125>,<-1>";
-//
-//		
-//		// Input parameter to add at function !!!!! 
-//		// String rsp = new SCExecutor().executeContract("p",inputString);
-//	}
-	
-	
 	@Test
-	public void generalTest() {
-		String p = "L1òsodihf";
+	public void BetaTestSC() {
 
-		System.out.println(p.substring(1, p.length()));
-	}
+		String str = "LDC 10;ISTORE 1;IADD;LDC 10;IADD;IADD;IADD;LDC 1;ILOAD 6;L2;GOTO L2;INVOKEVIRTUAL PRINT;LDC 0;L4;GOTO L2;INVOKEVIRTUAL PRINT;ILOAD 6;L3;GOTO L4;INVOKEVIRTUAL CONTR L3;IF_ICMPLT;LDC 0;ILOAD 6;L1;GOTO L2;INVOKEVIRTUAL PRINT;IADD;LDC 10;ILOAD 6;L0;GOTO L1;INVOKEVIRTUAL CONTR L0;IF_ICMPGT;LDC 0;ILOAD 6;INVOKEVIRTUAL PRINT;IADD;LDC 10;ILOAD 6;ISTORE 6;IADD;ILOAD 5;IADD;ILOAD 4;IADD;ILOAD 3;LDC 10;ICREATE 6 1;ISTORE 5;READINPUT;ICREATE 5 1;ISTORE 4;READINPUT;ICREATE 4 1;ISTORE 3;READINPUT;ICREATE 3 1;IGLBLOAD 2 3 2;IGLBLOAD 1 3 1";
+
 	
+		SCExecuter sce = new SCExecuter( 
+				Arrays.asList( str.split(";") ), 
+				"1;2;3" 
+			);
+		sce.executeCoontract( "scName" );
+	}	
 	
 }

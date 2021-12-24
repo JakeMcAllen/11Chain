@@ -372,7 +372,6 @@ public class Node {
 
 					// For Users
 					case "postTransactionInPool":
-
 						returnString = postTransaction( jObj );
 						break;
 
@@ -380,15 +379,12 @@ public class Node {
 						returnString = getTransactionFromObject( jObj );
 						break;
 
-
 						// For Guaranteer
 					case "setNewBlock":
-
 						setNewBlock( jObj );
 						break;
 
 					case "setNewBlockToMilestone":
-
 						setMilestone(jObj);
 						break;
 
@@ -610,16 +606,13 @@ public class Node {
 	 * 		SMART CONTRACT
 	 * 
 	 */
-	// TODO: Smart contract Execution
+	private JSONObject SmartContractExecution(JSONObject jObj) {		
 
-	// TODO: Smart contract control
-
-	private JSONObject SmartContractExecution(JSONObject jObj) {
-
+		// TODO: Controllo che l'utente possa usare lo smart contract 
+		
 		// Carica lo smart contract da una transazione
 		JSONObject sc = getTransactionFromObject( jObj.getJSONObject("SCTransaction") );
-
-
+		
 		// TODO: Controlla lo smart contract
 
 
@@ -635,12 +628,6 @@ public class Node {
 		joo.put("Output", sce.getOutput());
 
 		return joo;
-	}
-
-	public void sendSCResponse(JSONObject jobj) {
-		// toglie dalla lista di attesa un utente
-
-		// Manda una risposta
 	}
 
 
@@ -662,12 +649,6 @@ public class Node {
 	 * 		DATA MANIPOLATION
 	 * 
 	 */
-	// TODO: Validazione delle transazioni
-
-	// TODO: Creazione di un blocco e validazione
-
-	// TODO: ReadChain
-
 	public void setListenerIsActive( boolean active ) throws IOException {
 		if (!active) saveNode();
 
@@ -747,7 +728,7 @@ public class Node {
 				Socket s = new Socket(this.guarantorHostName, this.guarantorPort);
 				PrintWriter out = new PrintWriter(s.getOutputStream(), true);
 				BufferedReader in = new BufferedReader( new InputStreamReader(s.getInputStream()) );
-				) {
+			) {
 
 			// READ
 			out.println( input.toString() );

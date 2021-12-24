@@ -49,7 +49,7 @@ public class SCExecuter implements SCEinterface {
 
 	public SCExecuter(List<String> inputStr, String inputVar) {
 
-		this.listBytecode = new ArrayList<String>();
+		this.listBytecode = inputStr;
 
 		this.listVariable = new HashMap<String, Map<String, Varible>> ();
 		this.listGlobalVariable = new HashMap<String, Varible> ();
