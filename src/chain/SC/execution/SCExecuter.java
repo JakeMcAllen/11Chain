@@ -7,7 +7,7 @@ import java.util.Map;
 
 import javax.management.RuntimeErrorException;
 
-import chain.SC.execution.Varible.TYPES;
+import chain.SC.execution.Variable.TYPES;
 
 public class SCExecuter implements SCEinterface {
 
@@ -19,23 +19,39 @@ public class SCExecuter implements SCEinterface {
 	private List<String> listBytecode = null;
 
 	/**
-	 * 	Contail list of variable used in S.C.
+	 * 	Contain the list of variable used in S.C.
 	 * 	
-	 * 	The first is for 
+	 * 	The first parameter mark the contract / function that insert the variable.
+	 * 	The second parameter is a tuple:
+	 * 		1. Name of variable;
+	 * 		2. Variable content
 	 * 
 	 */
-	private Map<String, Map<String, Varible>> listVariable = null;
-	private Map<String, Varible> listGlobalVariable = null;
+	private Map<String, Map<String, Variable>> listVariable = null;
+	private Map<String, Variable> listGlobalVariable = null;
 
 	/**
 	 * 	Space where are stored all variable and 
 	 * 
-	 * 	The first param contain the name of contract/function,
-	 * 	The second on is a list of object.
+	 * 	The first parameter contain the name of contract/function,
+	 * 	The second on is a list of all objects in the heap.
+	 * 		It is ordered
 	 * 
 	 */
 	private Map<String, List<Object>> heap = null;
+	
+	/**
+	 * 	List of contract and function
+	 * 
+	 * 	Contain a list of all contract and their position in "listBytecode".
+	 * 	This is useful for call to action, for control and for organization
+	 * 
+	 */
+	private Map<String, Integer> contractPosizion = null;
+	private Map<String, Integer> functionPosizion = null;
 
+	
+	
 	// I/O
 	private String output = "";
 	private String[] inputVar = null;
@@ -47,17 +63,41 @@ public class SCExecuter implements SCEinterface {
 
 	
 
-	public SCExecuter(List<String> inputStr, String inputVar) {
+	public SCExecuter(List<String> inputStr, String inputVar, String contract) {
 
 		this.listBytecode = inputStr;
 
-		this.listVariable = new HashMap<String, Map<String, Varible>> ();
-		this.listGlobalVariable = new HashMap<String, Varible> ();
+		this.listVariable = new HashMap<String, Map<String, Variable>> ();
+		this.listGlobalVariable = new HashMap<String, Variable> ();
 
 		this.heap = new HashMap<String, List<Object>>();
 
-		
+		// TODO change variable "inputVar" to arrays
 		this.inputVar = inputVar.split(";");
+		
+		
+		// TODO: Check position of all contract / function
+		int idx = 0;
+		for ( String comd : listBytecode ) {
+			
+			if (comd.contains("CONTRACT")) {
+				contractPosizion.put(comd.split(" ")[1], idx );
+			} else if (comd.contains("FUNCTION")) {
+				functionPosizion.put(comd.split(" ")[1], idx );
+			}
+			
+			idx++;
+		};
+		
+		
+		
+		// TODO: execution of a specific contract
+		if (contractPosizion.containsKey(contract)) {
+			executeCoontract(contract);
+		} else {
+			// TODO: Return an error message.
+		}
+		
 	}
 
 
@@ -80,24 +120,40 @@ public class SCExecuter implements SCEinterface {
 
 		return true;
 	}
+	
+	@Override
+	public void moveTo(int idx) {
+		try {
+			this.bytecode = this.listBytecode.get(idx);
+			this.bytecodeIndex++;	
+		} 
+		catch (IndexOutOfBoundsException e) { error("End execution withut a return message "); } 
+		catch (Exception e) { error("Internal error. Check the code and try to restart"); }
+	}
 
 	@Override
 	public void error(String error) {
 		throw new RuntimeErrorException(null, error);
 	}
-
-
-
-
+	
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public void executeCoontract(String ctName) {
 
 		// TODO carica il codice da eseguire 
-
-		this.listVariable.put(ctName, new HashMap<String, Varible> ());
+		if (this.contractPosizion.containsKey(ctName)) {
+			moveTo(this.contractPosizion.get(ctName));
+		} else if (this.functionPosizion.containsKey(ctName)) {
+			moveTo(this.functionPosizion.get(ctName));
+		} else {
+			this.error("The contract/function : " + ctName + " It is not in the exection istruction.");
+		}
+		
+		this.listVariable.put(ctName, new HashMap<String, Variable> ());
 		heap.put(ctName, new ArrayList<Object> ());
 		boolean rtn = false;
+		
 		
 
 		while ( move() && !rtn ) {
@@ -131,15 +187,15 @@ public class SCExecuter implements SCEinterface {
 				var = pop(ctName);
 
 				try {
-					TYPES tp = Varible.TYPES.getClass( cmd[2] );
-					Varible<?> vr = null;
+					TYPES tp = Variable.TYPES.getClass( cmd[2] );
+					Variable<?> vr = null;
 
-					if ( Varible.getType( var ).getClss() == String.class ) {
-						vr = new Varible<String>( Integer.parseInt( cmd[1] ), (String) var, tp, Integer.parseInt( cmd[2] ) );
-					} else if ( Varible.getType( var ).getClss() == Integer.class ) {
-						vr = new Varible<Integer>( Integer.parseInt( cmd[1] ), (int) var, tp, Integer.parseInt( cmd[2] ) );
-					} else if ( Varible.getType( var ).getClss() == Boolean.class ) {
-						vr = new Varible<Boolean>( Integer.parseInt( cmd[1] ), (Boolean) var, tp, Integer.parseInt( cmd[2] ) );
+					if ( Variable.getType( var ).getClss() == String.class ) {
+						vr = new Variable<String>( Integer.parseInt( cmd[1] ), (String) var, tp, Integer.parseInt( cmd[2] ) );
+					} else if ( Variable.getType( var ).getClss() == Integer.class ) {
+						vr = new Variable<Integer>( Integer.parseInt( cmd[1] ), (int) var, tp, Integer.parseInt( cmd[2] ) );
+					} else if ( Variable.getType( var ).getClss() == Boolean.class ) {
+						vr = new Variable<Boolean>( Integer.parseInt( cmd[1] ), (Boolean) var, tp, Integer.parseInt( cmd[2] ) );
 					} else {
 						throw new RuntimeErrorException(null, "Impossible check variable type for creation method");
 					}
@@ -159,15 +215,15 @@ public class SCExecuter implements SCEinterface {
 				var = pop(ctName);
 				
 				try {
-					TYPES tp = Varible.TYPES.getClass( cmd[2] );
-					Varible<?> vr = null;
+					TYPES tp = Variable.TYPES.getClass( cmd[2] );
+					Variable<?> vr = null;
 
-					if ( Varible.getType( var ).getClss() == String.class ) {
-						vr = new Varible<String>( Integer.parseInt( cmd[1] ), (String) var, tp, Integer.parseInt( cmd[3] ) );
-					} else if ( Varible.getType( var ).getClss() == Integer.class ) {
-						vr = new Varible<Integer>( Integer.parseInt( cmd[1] ), (int) var, tp, Integer.parseInt( cmd[3] ) );
-					} else if ( Varible.getType( var ).getClss() == Boolean.class ) {
-						vr = new Varible<Boolean>( Integer.parseInt( cmd[1] ), (Boolean) var, tp, Integer.parseInt( cmd[3] ) );
+					if ( Variable.getType( var ).getClss() == String.class ) {
+						vr = new Variable<String>( Integer.parseInt( cmd[1] ), (String) var, tp, Integer.parseInt( cmd[3] ) );
+					} else if ( Variable.getType( var ).getClss() == Integer.class ) {
+						vr = new Variable<Integer>( Integer.parseInt( cmd[1] ), (int) var, tp, Integer.parseInt( cmd[3] ) );
+					} else if ( Variable.getType( var ).getClss() == Boolean.class ) {
+						vr = new Variable<Boolean>( Integer.parseInt( cmd[1] ), (Boolean) var, tp, Integer.parseInt( cmd[3] ) );
 					} else {
 						throw new RuntimeErrorException(null, "Impossible check variable type for global creation method");
 					}
@@ -184,14 +240,14 @@ public class SCExecuter implements SCEinterface {
 				var = pop(ctName);
 				var1 = pop(ctName);
 
-				if ( Varible.getType( var ).getClss() == Integer.class
-						&& Varible.getType( var1 ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class
+						&& Variable.getType( var1 ).getClss() == Integer.class ) {
 					add(ctName, Integer.parseInt( var.toString() ) + Integer.parseInt( var1.toString() ) );
-				} else if ( Varible.getType( var ).getClss() == Boolean.class 
-						|| Varible.getType( var1 ).getClss() == Boolean.class ) {
-					throw new RuntimeErrorException(null, "Not possible add a bollean variable");
-				} else if ( Varible.getType( var ).getClss() == String.class 
-						|| Varible.getType( var1 ).getClss() == String.class ) {
+				} else if ( Variable.getType( var ).getClss() == Boolean.class 
+						|| Variable.getType( var1 ).getClss() == Boolean.class ) {
+					throw new RuntimeErrorException(null, "Not possible ad)d a bollean variable");
+				} else if ( Variable.getType( var ).getClss() == String.class 
+						|| Variable.getType( var1 ).getClss() == String.class ) {
 					add(ctName, var.toString().concat( var1.toString() ));
 				} else {
 					throw new RuntimeErrorException(null, "Not possible add a not definited variable");
@@ -203,8 +259,8 @@ public class SCExecuter implements SCEinterface {
 				var = pop(ctName);
 				var1 = pop(ctName);
 
-				if ( Varible.getType( var ).getClss() == Integer.class
-						&& Varible.getType( var1 ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class
+						&& Variable.getType( var1 ).getClss() == Integer.class ) {
 					add(ctName, Integer.parseInt( var.toString() ) + Integer.parseInt( var1.toString() ) );
 				} else {
 					throw new RuntimeErrorException(null, "Not possible subtract a bollean variable");
@@ -216,14 +272,14 @@ public class SCExecuter implements SCEinterface {
 				var = pop(ctName);
 				var1 = pop(ctName);
 
-				if ( Varible.getType( var ).getClss() == Integer.class
-						&& Varible.getType( var1 ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class
+						&& Variable.getType( var1 ).getClss() == Integer.class ) {
 					add(ctName, Integer.parseInt( var.toString() ) + Integer.parseInt( var1.toString() ) );
-				} else if ( Varible.getType( var ).getClss() == Boolean.class 
-						|| Varible.getType( var1 ).getClss() == Boolean.class ) {
+				} else if ( Variable.getType( var ).getClss() == Boolean.class 
+						|| Variable.getType( var1 ).getClss() == Boolean.class ) {
 					throw new RuntimeErrorException(null, "Not possible moliplicate a bollean variable");
-				} else if ( Varible.getType( var ).getClss() == String.class 
-						|| Varible.getType( var1 ).getClss() == Integer.class ) {
+				} else if ( Variable.getType( var ).getClss() == String.class 
+						|| Variable.getType( var1 ).getClss() == Integer.class ) {
 
 					String str = "";
 					for (int i = 0; i < Integer.parseInt( var1.toString() ); i++) {
@@ -241,7 +297,7 @@ public class SCExecuter implements SCEinterface {
 				var = pop(ctName);
 				var1 = pop(ctName);
 
-				if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var1 ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var1 ).getClss() == Integer.class ) {
 					if ( Integer.parseInt( var1.toString() ) == 0 ) {
 						throw new RuntimeErrorException(null, "Not possible division for 0 variable");
 					}
@@ -260,13 +316,13 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == String.class && Varible.getType( var ).getClss() == String.class ) {
+				if ( Variable.getType( var ).getClss() == String.class && Variable.getType( var ).getClss() == String.class ) {
 					bl = var.toString().equals( var1.toString() );
 
-				} else if ( Varible.getType( var ).getClss() == Boolean.class && Varible.getType( var ).getClss() == Boolean.class ) {
+				} else if ( Variable.getType( var ).getClss() == Boolean.class && Variable.getType( var ).getClss() == Boolean.class ) {
 					bl = Boolean.getBoolean( var.toString() ) == Boolean.getBoolean( var1.toString() );
 
-				} else if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var ).getClss() == Integer.class ) {
+				} else if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var ).getClss() == Integer.class ) {
 					bl = Integer.getInteger( var.toString() ) == Integer.getInteger( var1.toString() );
 
 				} else {
@@ -289,13 +345,13 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == String.class && Varible.getType( var ).getClss() == String.class ) {
+				if ( Variable.getType( var ).getClss() == String.class && Variable.getType( var ).getClss() == String.class ) {
 					bl = !var.toString().equals( var1.toString() );
 
-				} else if ( Varible.getType( var ).getClss() == Boolean.class && Varible.getType( var ).getClss() == Boolean.class ) {
+				} else if ( Variable.getType( var ).getClss() == Boolean.class && Variable.getType( var ).getClss() == Boolean.class ) {
 					bl = Boolean.getBoolean( var.toString() ) != Boolean.getBoolean( var1.toString() );
 
-				} else if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var ).getClss() == Integer.class ) {
+				} else if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var ).getClss() == Integer.class ) {
 					bl = Integer.getInteger( var.toString() ) != Integer.getInteger( var1.toString() );
 
 				} else {
@@ -318,7 +374,7 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var ).getClss() == Integer.class ) {
 					bl = Integer.getInteger( var.toString() ) >= Integer.getInteger( var1.toString() );
 
 				} else {
@@ -335,7 +391,7 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var ).getClss() == Integer.class ) {
 					bl = Integer.getInteger( var.toString() ) <= Integer.getInteger( var1.toString() );
 
 				} else {
@@ -352,7 +408,7 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var ).getClss() == Integer.class ) {
 					bl = Integer.getInteger( var.toString() ) < Integer.getInteger( var1.toString() );
 
 				} else {
@@ -369,7 +425,7 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == Integer.class && Varible.getType( var ).getClss() == Integer.class ) {
+				if ( Variable.getType( var ).getClss() == Integer.class && Variable.getType( var ).getClss() == Integer.class ) {
 					bl = Integer.getInteger( var.toString() ) > Integer.getInteger( var1.toString() );
 
 				} else {
@@ -386,7 +442,7 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == Boolean.class && Varible.getType( var ).getClss() == Boolean.class ) {
+				if ( Variable.getType( var ).getClss() == Boolean.class && Variable.getType( var ).getClss() == Boolean.class ) {
 					bl = Boolean.getBoolean( var.toString() ) && Boolean.getBoolean( var1.toString() );
 
 				} else {
@@ -403,7 +459,7 @@ public class SCExecuter implements SCEinterface {
 				bl = false;
 
 
-				if ( Varible.getType( var ).getClss() == Boolean.class && Varible.getType( var ).getClss() == Boolean.class ) {
+				if ( Variable.getType( var ).getClss() == Boolean.class && Variable.getType( var ).getClss() == Boolean.class ) {
 					bl = Boolean.getBoolean( var.toString() ) || Boolean.getBoolean( var1.toString() );
 
 				} else {
@@ -446,7 +502,7 @@ public class SCExecuter implements SCEinterface {
 						vl = Integer.parseInt( cmd[2].substring(1, cmd[2].length() ) );
 	
 						
-						if ( Varible.getType( var ).getClss() == Boolean.class ) {
+						if ( Variable.getType( var ).getClss() == Boolean.class ) {
 	
 							if ( Boolean.parseBoolean( (String) var ) ) {
 	
@@ -503,5 +559,7 @@ public class SCExecuter implements SCEinterface {
 	public String getOutput() {
 		return this.output;
 	}
+
+
 	
 }

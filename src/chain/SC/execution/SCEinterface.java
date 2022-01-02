@@ -5,12 +5,21 @@ import java.util.List;
 public interface SCEinterface {
 
 	
+	
 	/**
 	 * 	Moves forward one position with reading of bytecode list 
 	 * @return 
 	 * 
 	 */
 	public boolean move();
+	
+	/**
+	 * 	Move the execution to the the instructions with the specified tag
+	 * 	In fact load to variable: "bytecode" the instruction at specified place 
+	 * 
+	 * @param idx the index of instruction to load at "bytecode" variable
+	 */
+	public void moveTo(int idx);
 	
 	/**
 	 * 	Throw an runtime exception thath return a to user a message.

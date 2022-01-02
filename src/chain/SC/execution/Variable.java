@@ -2,7 +2,7 @@ package chain.SC.execution;
 
 import javax.management.RuntimeErrorException;
 
-public class Varible <T> {
+public class Variable <T> {
 
 	private int id=0;
 	// TODO: Da far diventare una lista
@@ -12,7 +12,7 @@ public class Varible <T> {
 	// TODO: Controlli lista o item
 	private int Item_List = 0;			// if "0" is item. "1" if it's a list
 	
-	public Varible(int id, T val, TYPES tp, int il) {
+	public Variable(int id, T val, TYPES tp, int il) {
 		super();
 		this.id = id;
 		this.val = val;

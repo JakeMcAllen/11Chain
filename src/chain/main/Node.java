@@ -619,9 +619,9 @@ public class Node {
 		// Esegue lo S.C.
 		SCExecuter sce = new SCExecuter( 
 					Arrays.asList( sc.getString("data").toString().split(";") ), 
-					jObj.getString("InputFile") 
+					jObj.getString("InputFile"),
+					jObj.getString("scName")
 				);
-		sce.executeCoontract( jObj.getString("scName") );
 		
 		// Ottine l'outpt e lo invia all'utente
 		JSONObject joo = new JSONObject();
