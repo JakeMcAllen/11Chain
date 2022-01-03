@@ -78,6 +78,8 @@ public class SCExecuter implements SCEinterface {
 		
 		// TODO: Check position of all contract / function
 		int idx = 0;
+		contractPosizion = new HashMap<String, Integer> ();
+		functionPosizion = new HashMap<String, Integer> ();
 		for ( String comd : listBytecode ) {
 			
 			if (comd.contains("CONTRACT")) {
@@ -156,7 +158,7 @@ public class SCExecuter implements SCEinterface {
 		
 		
 
-		while ( move() && !rtn ) {
+		while ( !rtn && move() ) {
 
 			String[] cmd = this.bytecode.split(" ");
 			Object var = null;
@@ -248,7 +250,7 @@ public class SCExecuter implements SCEinterface {
 					throw new RuntimeErrorException(null, "Not possible ad)d a bollean variable");
 				} else if ( Variable.getType( var ).getClss() == String.class 
 						|| Variable.getType( var1 ).getClss() == String.class ) {
-					add(ctName, var.toString().concat( var1.toString() ));
+					add(ctName, var.toString() + var1.toString() );
 				} else {
 					throw new RuntimeErrorException(null, "Not possible add a not definited variable");
 				}
@@ -261,7 +263,7 @@ public class SCExecuter implements SCEinterface {
 
 				if ( Variable.getType( var ).getClss() == Integer.class
 						&& Variable.getType( var1 ).getClss() == Integer.class ) {
-					add(ctName, Integer.parseInt( var.toString() ) + Integer.parseInt( var1.toString() ) );
+					add(ctName, Integer.parseInt( var.toString() ) - Integer.parseInt( var1.toString() ) );
 				} else {
 					throw new RuntimeErrorException(null, "Not possible subtract a bollean variable");
 				}
@@ -274,7 +276,7 @@ public class SCExecuter implements SCEinterface {
 
 				if ( Variable.getType( var ).getClss() == Integer.class
 						&& Variable.getType( var1 ).getClss() == Integer.class ) {
-					add(ctName, Integer.parseInt( var.toString() ) + Integer.parseInt( var1.toString() ) );
+					add(ctName, Integer.parseInt( var.toString() ) * Integer.parseInt( var1.toString() ) );
 				} else if ( Variable.getType( var ).getClss() == Boolean.class 
 						|| Variable.getType( var1 ).getClss() == Boolean.class ) {
 					throw new RuntimeErrorException(null, "Not possible moliplicate a bollean variable");
@@ -283,7 +285,7 @@ public class SCExecuter implements SCEinterface {
 
 					String str = "";
 					for (int i = 0; i < Integer.parseInt( var1.toString() ); i++) {
-						str.concat( var.toString() );
+						str += var.toString();
 					}
 
 					add(ctName, str);
@@ -494,7 +496,7 @@ public class SCExecuter implements SCEinterface {
 					case "PRINT":
 						var = pop(ctName);
 	
-						this.output.concat( var.toString() );
+						this.output += var.toString();
 						break;
 	
 					case "CONTR":
@@ -539,13 +541,20 @@ public class SCExecuter implements SCEinterface {
 
 			}
 		}
+
+	}
+	
+	
+	@Override
+	public String getEsecutionOutput() {
+		return this.output;
 	}
 
 
 	@Override
 	public Object pop(String ct) {
-		int position = heap.get(ct).size() -1;
-
+		int position = heap.get(ct).size() - 1;
+		
 		return heap.get(ct).remove( position );
 	}
 
@@ -559,6 +568,9 @@ public class SCExecuter implements SCEinterface {
 	public String getOutput() {
 		return this.output;
 	}
+
+
+
 
 
 	

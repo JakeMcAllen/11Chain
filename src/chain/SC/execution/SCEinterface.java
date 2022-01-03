@@ -36,6 +36,14 @@ public interface SCEinterface {
 	public void executeCoontract(String ctName);
 	
 	/**
+	 * 	Return to the caller to output of execution of a SmartContract
+	 * 	Output, String and return value are printed in a string thanks is return thanks to this method
+	 * 
+	 * @return String of execution
+	 */
+	public String getEsecutionOutput();
+	
+	/**
 	 * 	Remove the value on top of heap and return it 
 	 * 
 	 * @param ct String the name of contract
