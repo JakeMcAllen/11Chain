@@ -91,9 +91,11 @@ public class SCExecuter implements SCEinterface {
 			idx++;
 		};
 		
+		// TODO: Esecuzione delle mapping e importing
+		executeMappImp();
 		
 		
-		// TODO: execution of a specific contract
+		// execution of a specific contract
 		if (contractPosizion.containsKey(contract)) {
 			executeCoontract(contract);
 		} else {
@@ -127,7 +129,7 @@ public class SCExecuter implements SCEinterface {
 	public void moveTo(int idx) {
 		try {
 			this.bytecode = this.listBytecode.get(idx);
-			this.bytecodeIndex++;	
+			this.bytecodeIndex = idx + 1;
 		} 
 		catch (IndexOutOfBoundsException e) { error("End execution withut a return message "); } 
 		catch (Exception e) { error("Internal error. Check the code and try to restart"); }
@@ -143,7 +145,7 @@ public class SCExecuter implements SCEinterface {
 	@Override
 	public void executeCoontract(String ctName) {
 
-		// TODO carica il codice da eseguire 
+		// Load code to execute
 		if (this.contractPosizion.containsKey(ctName)) {
 			moveTo(this.contractPosizion.get(ctName));
 		} else if (this.functionPosizion.containsKey(ctName)) {
@@ -186,56 +188,38 @@ public class SCExecuter implements SCEinterface {
 				break;
 
 			case "ICREATE":
-				var = pop(ctName);
 
 				try {
 					TYPES tp = Variable.TYPES.getClass( cmd[2] );
 					Variable<?> vr = null;
-
-					if ( Variable.getType( var ).getClss() == String.class ) {
-						vr = new Variable<String>( Integer.parseInt( cmd[1] ), (String) var, tp, Integer.parseInt( cmd[2] ) );
-					} else if ( Variable.getType( var ).getClss() == Integer.class ) {
-						vr = new Variable<Integer>( Integer.parseInt( cmd[1] ), (int) var, tp, Integer.parseInt( cmd[2] ) );
-					} else if ( Variable.getType( var ).getClss() == Boolean.class ) {
-						vr = new Variable<Boolean>( Integer.parseInt( cmd[1] ), (Boolean) var, tp, Integer.parseInt( cmd[2] ) );
-					} else {
-						throw new RuntimeErrorException(null, "Impossible check variable type for creation method");
+					vl = Integer.parseInt( cmd[1] );
+					
+					switch (tp.getId()) 
+					{
+					case 1:
+						 vr = new Variable<Integer>(vl, 0, tp, 0);
+						 break;
+					case 2: 
+						vr = new Variable<Boolean>(vl, false, tp, 0);
+						break;
+					
+					case 3: 
+						vr = new Variable<String>(vl, "", tp, 0);;
+						break;
+						
+					default:
+						error("Type not found");
 					}
 
-					listVariable.get(ctName).put(ctName, vr);
+					listVariable.get(ctName).put(cmd[1], vr);
 				} catch (Exception e) {
 					throw new RuntimeErrorException(null, "Internal error in variable creation. Check the code");
 				}
 				break;
 
-			case "IlOAD":
-				var = listVariable.get( cmd[1] );
-				add(ctName, var);
-				break;
-
-			case "IGLBLOAD":
-				var = pop(ctName);
-				
-				try {
-					TYPES tp = Variable.TYPES.getClass( cmd[2] );
-					Variable<?> vr = null;
-
-					if ( Variable.getType( var ).getClss() == String.class ) {
-						vr = new Variable<String>( Integer.parseInt( cmd[1] ), (String) var, tp, Integer.parseInt( cmd[3] ) );
-					} else if ( Variable.getType( var ).getClss() == Integer.class ) {
-						vr = new Variable<Integer>( Integer.parseInt( cmd[1] ), (int) var, tp, Integer.parseInt( cmd[3] ) );
-					} else if ( Variable.getType( var ).getClss() == Boolean.class ) {
-						vr = new Variable<Boolean>( Integer.parseInt( cmd[1] ), (Boolean) var, tp, Integer.parseInt( cmd[3] ) );
-					} else {
-						throw new RuntimeErrorException(null, "Impossible check variable type for global creation method");
-					}
-
-					listGlobalVariable.put(cmd[1], vr );
-				} catch (Exception e) {
-					throw new RuntimeErrorException(null, "Internal error in global variable creation. Check the code");
-				}
-				
-				
+			case "ILOAD":
+				var = listVariable.get(ctName).get( cmd[1] );
+				add(ctName, ((Variable) var).getVal());
 				break;
 
 			case "IADD":
@@ -536,8 +520,7 @@ public class SCExecuter implements SCEinterface {
 
 
 			default:
-
-				throw new IllegalArgumentException("Unexpected value: " + cmd[0] );	
+				throw new IllegalArgumentException("Unexpected value: " + cmd );	
 
 			}
 		}
@@ -561,7 +544,6 @@ public class SCExecuter implements SCEinterface {
 
 	@Override
 	public void add(String ct, Object obj) {
-
 		heap.get(ct).add(obj);
 	}
 
@@ -571,6 +553,55 @@ public class SCExecuter implements SCEinterface {
 
 
 
+	
+	private void executeMappImp() {
+		
+		for (String act : listBytecode) {
+			
+			String[] cmd = act.split(" ");
+			int vl = 0;
+
+			switch (cmd[0]) {
+			case "IGLBLOAD":
+				// TODO: item e list da distinguere e da trrattarre in modo diverso
+				vl = Integer.parseInt( cmd[1] );
+				
+				try {
+					TYPES tp = Variable.TYPES.getClass( cmd[2] );
+					Variable<?> vr = null;
+					
+					switch (tp.getId()) 
+					{
+					case 1:
+						 vr = new Variable<Integer>(vl, 0, tp, 0);
+						 break;
+					case 2: 
+						vr = new Variable<Boolean>(vl, false, tp, 0);
+						break;
+					
+					case 3: 
+						vr = new Variable<String>(vl, "", tp, 0);;
+						break;
+						
+					default:
+						error("Type not found");
+					}
+					
+					listGlobalVariable.put(cmd[1], vr );
+				} catch (Exception e) {
+					throw new RuntimeErrorException(null, "Internal error in global variable creation. Check the code");
+				}
+				
+				
+				// TODO: import and default
+				
+				break;
+			
+			}
+			
+		}
+		
+	}
 
 
 	

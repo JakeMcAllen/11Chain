@@ -10,6 +10,7 @@ public class Variable <T> {
 	private TYPES type = null;
 	
 	// TODO: Controlli lista o item
+	// TODO: ESEGUE OPERAZIONI DISTINTE E/O DEDICATE
 	private int Item_List = 0;			// if "0" is item. "1" if it's a list
 	
 	public Variable(int id, T val, TYPES tp, int il) {
@@ -52,12 +53,17 @@ public class Variable <T> {
 			this.clss = tp;
 			this.id = id;
 		}
-		
 
+		
 		
 		public Class getClss() {
 			return clss;
 		}
+		
+		public int getId() {
+			return id;
+		}
+		
 		
 		public static TYPES getClass(String id) {
 			for ( TYPES tp : TYPES.values() ) {
@@ -65,10 +71,6 @@ public class Variable <T> {
 			}
 			
 			return null;
-		}
-
-		public int getId() {
-			return id;
 		}
 		
 	}
